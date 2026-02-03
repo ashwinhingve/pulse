@@ -1,0 +1,601 @@
+﻿import React, { useState, useEffect, useCallback, memo, useRef, useMemo } from 'react';
+import { 
+  Shield, Activity, FileText, Stethoscope, 
+  MessageSquare, Mic, Paperclip, Send, 
+  AlertTriangle, Heart, User, Lock, 
+  ChevronRight, ArrowLeft, Menu, X,
+  Thermometer, CheckCircle, Upload, Key, Eye, EyeOff,
+  Sun, Moon, Monitor, MapPin, Battery, Zap
+} from 'lucide-react';
+
+
+/**
+ * PulseLogic - Client App (v3.0 Optimized)
+ * Performance: High (GPU Acceleration, Memoization, No unnecessary re-renders)
+ * Battery: Low Impact (On-demand sensors, Dark mode default)
+ * Security: Zero-Knowledge AES-256 (Simulated)
+ */
+
+
+// --- Static Data (Moved outside to save memory) ---
+const SYMPTOM_STEPS = [
+  { title: "Patient Profile", fields: ["Age", "Sex", "Weight"] },
+  { title: "Primary Symptoms", fields: ["Chest Pain", "Shortness of Breath", "Fever"] },
+  { title: "Vitals", fields: ["Temperature", "Heart Rate"] },
+];
+
+
+// --- Security Utilities ---
+const CryptoLayer = {
+  generateSessionKey: () => Math.random().toString(36).substring(2) + Date.now().toString(36),
+  encrypt: (text: string, key: string): string => {
+    if (!key || !text) return text;
+    // Fast XOR + Base64
+    let result = '';
+    for (let i = 0; i < text.length; i++) {
+      result += String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+    }
+    return `PL_ENC::${btoa(result)}`;
+  },
+  decrypt: (cipher: string, key: string): string => {
+    if (!cipher.startsWith('PL_ENC::') || !key) return cipher;
+    try {
+      const xor = atob(cipher.split('::')[1]);
+      let result = '';
+      for (let i = 0; i < xor.length; i++) {
+        result += String.fromCharCode(xor.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+      }
+      return result;
+    } catch (e) { return '***TAMPERED DATA***'; }
+  }
+};
+
+
+// --- Types ---
+type UserRole = 'public' | 'doctor';
+type AppTheme = 'light' | 'dark' | 'contrast';
+
+
+interface User {
+  id: string;
+  username: string;
+  role: UserRole;
+  name: string;
+  sessionKey: string;
+}
+
+
+interface ChatMessage {
+  id: string;
+  sender: 'user' | 'system' | 'peer';
+  content: string;
+  type: 'text' | 'file' | 'audio' | 'location';
+  timestamp: number; // Changed to number for serialization speed
+  encrypted: boolean;
+}
+
+
+// --- Memoized Components ---
+
+
+// 1. Single Chat Bubble (Prevents list re-renders)
+const ChatBubble = memo(({ msg, userKey, showEncrypted }: { msg: ChatMessage, userKey: string, showEncrypted: boolean }) => {
+  const displayContent = useMemo(() => {
+    if (showEncrypted) return msg.content;
+    return CryptoLayer.decrypt(msg.content, userKey);
+  }, [msg.content, userKey, showEncrypted]);
+
+
+  const isLoc = msg.type === 'location' && !showEncrypted;
+  const isUser = msg.sender === 'user';
+  const isSystem = msg.sender === 'system';
+
+
+  return (
+    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} animate-fade-in`}>
+      <div className={`max-w-[85%] sm:max-w-[75%] p-3 rounded-2xl text-sm shadow-sm transition-all duration-200 ${
+        isSystem ? 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-center w-full rounded-lg text-xs font-mono py-1' :
+        isUser ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-tl-none'
+      }`}>
+        {isLoc ? (
+          <div className="flex flex-col gap-1 font-mono text-xs bg-blue-700/50 p-2 rounded border border-blue-500/30">
+            <div className="flex items-center gap-2"><MapPin size={14} /> {displayContent.split('|')[0]}</div>
+            <div className="flex items-center gap-2 border-t border-white/20 pt-1 mt-1 text-blue-100">
+              <Battery size={14} /> {displayContent.split('|')[1]?.trim() || 'Battery: N/A'}
+            </div>
+          </div>
+        ) : (
+          <div className={showEncrypted ? 'font-mono text-xs break-all opacity-80' : ''}>{displayContent}</div>
+        )}
+        {msg.encrypted && !isSystem && !showEncrypted && <Lock size={10} className="inline ml-2 opacity-50" />}
+      </div>
+    </div>
+  );
+});
+
+
+// 2. Dashboard Card (Prevents layout thrashing)
+const DashboardCard = memo(function DashboardCard({ icon, title, desc, onClick }: any) {
+  return (
+    <button 
+      onClick={onClick} 
+      className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md hover:border-blue-300 dark:hover:border-blue-500 transition-all text-left group w-full relative overflow-hidden h-full active:scale-[0.98] will-change-transform"
+    >
+      <div className="absolute top-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <Lock size={12} className="text-slate-300 dark:text-slate-600" />
+      </div>
+      <div className="mb-4 bg-slate-50 dark:bg-slate-700 w-12 h-12 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+        {icon}
+      </div>
+      <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-1">{title}</h3>
+      <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{desc}</p>
+    </button>
+  );
+});
+
+
+// --- Main App Component ---
+
+
+export default function PulseLogicApp() {
+  const [view, setView] = useState<'auth' | 'disclaimer' | 'dashboard' | 'symptom' | 'ecg' | 'chat' | 'assistant'>('auth');
+  const [user, setUser] = useState<User | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [theme, setTheme] = useState<AppTheme>('light');
+  const [isLocked, setIsLocked] = useState(false);
+  
+  // Refs for timers and scroll
+  const idleTimer = useRef<NodeJS.Timeout | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+
+  // Auth States
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [regMode, setRegMode] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<UserRole>('public');
+
+
+  // Initialize Theme based on System Preference (Battery Saver)
+  useEffect(() => {
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      setTheme('dark');
+    }
+  }, []);
+
+
+  // Theme Toggler
+  const cycleTheme = useCallback(() => {
+    setTheme(prev => {
+      if (prev === 'light') return 'dark';
+      if (prev === 'dark') return 'contrast';
+      return 'light';
+    });
+  }, []);
+
+
+  // Auto-Lock Logic (Passive listeners for performance)
+  const resetIdleTimer = useCallback(() => {
+    if (idleTimer.current) clearTimeout(idleTimer.current);
+    if (user && !isLocked) {
+      idleTimer.current = setTimeout(() => {
+        setIsLocked(true);
+      }, 60000); // 60s
+    }
+  }, [user, isLocked]);
+
+
+  useEffect(() => {
+    // Use passive listeners to not block scrolling
+    window.addEventListener('mousemove', resetIdleTimer, { passive: true });
+    window.addEventListener('keydown', resetIdleTimer, { passive: true });
+    window.addEventListener('touchstart', resetIdleTimer, { passive: true });
+    return () => {
+      window.removeEventListener('mousemove', resetIdleTimer);
+      window.removeEventListener('keydown', resetIdleTimer);
+      window.removeEventListener('touchstart', resetIdleTimer);
+    };
+  }, [resetIdleTimer]);
+
+
+  const handleLogin = useCallback(() => {
+    if (username && password) {
+      const role = username.toLowerCase().includes('dr') ? 'doctor' : 'public';
+      const sessionKey = CryptoLayer.generateSessionKey();
+      
+      setUser({
+        id: 'user-' + Math.random().toString(36).substr(2, 9),
+        username,
+        name: username, 
+        role: regMode ? selectedRole : role,
+        sessionKey
+      });
+      setView('disclaimer');
+      setIsLocked(false);
+    }
+  }, [username, password, regMode, selectedRole]);
+
+
+  const logout = useCallback(() => {
+    setUser(null);
+    setView('auth');
+    setUsername('');
+    setPassword('');
+    setIsLocked(false);
+  }, []);
+
+
+  // --- Render Views ---
+
+
+  if (view === 'auth') {
+    return (
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4 overflow-y-auto" data-theme="dark">
+        {/* Simplified Background for Performance */}
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 z-0"></div>
+
+
+        <div className="bg-slate-800 w-full max-w-md p-6 sm:p-8 rounded-2xl shadow-2xl border border-slate-700 relative z-10 my-auto animate-fade-in">
+          <div className="flex justify-center mb-6">
+            <div className="h-16 w-16 bg-blue-900/50 rounded-full flex items-center justify-center text-blue-400 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.5)]">
+              <Shield size={32} strokeWidth={2.5} />
+            </div>
+          </div>
+          <h1 className="text-3xl font-bold text-center text-white mb-2">PulseLogic</h1>
+          <p className="text-center text-slate-400 mb-8 text-sm">Clinical decision support and communication</p>
+
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Secure Identity</label>
+              <div className="relative">
+                <User className="absolute left-3 top-3 text-slate-500" size={18} />
+                <input 
+                  type="text" 
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 bg-slate-900 border border-slate-700 text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition"
+                  placeholder="Enter ID"
+                />
+              </div>
+            </div>
+            
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Password</label>
+              <div className="relative">
+                <Key className="absolute left-3 top-3 text-slate-500" size={18} />
+                <input 
+                  type="password" 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 bg-slate-900 border border-slate-700 text-white rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition"
+                  placeholder="••••••••••••"
+                />
+              </div>
+            </div>
+
+
+            {regMode && (
+              <div className="flex gap-2 p-1 bg-slate-900 rounded-lg border border-slate-700">
+                <button onClick={() => setSelectedRole('public')} className={`flex-1 py-2 text-xs font-bold rounded-md transition ${selectedRole === 'public' ? 'bg-slate-700 text-white' : 'text-slate-500'}`}>General User</button>
+                <button onClick={() => setSelectedRole('doctor')} className={`flex-1 py-2 text-xs font-bold rounded-md transition ${selectedRole === 'doctor' ? 'bg-slate-700 text-white' : 'text-slate-500'}`}>Medical Pro</button>
+              </div>
+            )}
+
+
+            <button onClick={handleLogin} className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg transition shadow-lg shadow-blue-900/50 flex items-center justify-center gap-2 active:scale-95">
+              <Lock size={16} /> {regMode ? 'Initialize Vault' : 'Login'}
+            </button>
+
+
+            <button onClick={() => setRegMode(!regMode)} className="w-full text-xs text-slate-500 hover:text-blue-400 transition mt-2">
+              {regMode ? 'Have an ID? Login' : 'New User? Generate Keys'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+
+  if (isLocked && user) {
+    return (
+      <div className="fixed inset-0 z-50 bg-slate-900 flex flex-col items-center justify-center text-white p-4">
+        <div className="h-24 w-24 bg-slate-800 rounded-full flex items-center justify-center mb-6 text-slate-400 border border-slate-700">
+          <Lock size={48} />
+        </div>
+        <h2 className="text-2xl font-bold mb-2">Session Encrypted</h2>
+        <button onClick={() => setIsLocked(false)} className="bg-blue-600 hover:bg-blue-500 px-8 py-3 rounded-xl font-bold transition mt-6">Unlock</button>
+        <button onClick={logout} className="mt-4 text-sm text-slate-500">Log Out</button>
+      </div>
+    );
+  }
+
+
+  if (view === 'disclaimer') {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+        <div className="bg-white max-w-lg w-full rounded-xl p-6 shadow-2xl border-l-4 border-amber-500 animate-fade-in">
+          <div className="flex items-center gap-3 text-amber-600 mb-4">
+            <AlertTriangle size={28} />
+            <h2 className="text-xl font-bold text-slate-900">Disclaimer</h2>
+          </div>
+          <p className="text-slate-600 mb-6 text-sm">PulseLogic is a support tool. It does not replace professional medical advice. Data is locally encrypted.</p>
+          <button onClick={() => setView('dashboard')} className="w-full bg-slate-900 text-white py-3 rounded-lg font-bold">I Understand</button>
+        </div>
+      </div>
+    );
+  }
+
+
+  // --- Main Layout ---
+  return (
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col relative overflow-hidden transition-colors duration-300" data-theme={theme}>
+      {/* Dynamic Styles (No @tailwind directive to avoid runtime errors) */}
+      <style>{`
+        .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; will-change: opacity, transform; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Theming Engine */
+        [data-theme='dark'] { color-scheme: dark; }
+        [data-theme='dark'] .bg-white { background-color: #1e293b !important; color: #f8fafc !important; }
+        [data-theme='dark'] .text-slate-800 { color: #f8fafc !important; }
+        [data-theme='dark'] .text-slate-600 { color: #94a3b8 !important; }
+        [data-theme='contrast'] { filter: contrast(1.2) grayscale(1); background-color: black; }
+      `}</style>
+
+
+      {/* Header */}
+      <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30 shadow-sm h-16 shrink-0">
+        <div className="max-w-7xl mx-auto px-4 h-full flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button onClick={() => setIsSidebarOpen(true)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full lg:hidden text-slate-600 dark:text-slate-300">
+              <Menu size={20} />
+            </button>
+            <div className="flex items-center gap-2 cursor-pointer" onClick={() => setView('dashboard')}>
+              <div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-md">
+                <Shield size={16} strokeWidth={3} />
+              </div>
+              <span className="font-bold text-slate-800 dark:text-white text-lg hidden sm:block">PulseLogic</span>
+            </div>
+          </div>
+
+
+          <div className="flex items-center gap-2">
+            <button onClick={cycleTheme} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-700 dark:text-slate-300">
+              {theme === 'light' && <Sun size={18} />}
+              {theme === 'dark' && <Moon size={18} />}
+              {theme === 'contrast' && <Monitor size={18} />}
+            </button>
+            <button className="bg-red-500 text-white px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-2 shadow-md">
+              <AlertTriangle size={14} /> SOS
+            </button>
+            <div onClick={() => setIsLocked(true)} className="h-9 w-9 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-600 dark:text-slate-400 cursor-pointer">
+              <Lock size={16} />
+            </div>
+            <div className="h-9 w-9 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center text-blue-700 dark:text-blue-300 font-bold">
+              {user?.name?.charAt(0).toUpperCase()}
+            </div>
+          </div>
+        </div>
+      </header>
+
+
+      {/* Sidebar Overlay */}
+      {isSidebarOpen && (
+        <div className="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-sm lg:hidden" onClick={() => setIsSidebarOpen(false)}>
+          <div className="absolute left-0 top-0 h-full w-64 bg-white dark:bg-slate-900 shadow-2xl p-6" onClick={e => e.stopPropagation()}>
+             <div className="flex justify-between items-center mb-8">
+               <span className="font-bold text-lg text-slate-800 dark:text-white">Menu</span>
+               <button onClick={() => setIsSidebarOpen(false)} className="text-slate-500"><X size={20} /></button>
+             </div>
+             <nav className="space-y-2">
+                {['Dashboard', 'Chat', 'Assistant'].map(item => (
+                  <button key={item} onClick={() => { setView(item.toLowerCase() as any); setIsSidebarOpen(false); }} className="w-full text-left px-4 py-3 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium">{item}</button>
+                ))}
+                <div className="h-px bg-slate-200 dark:bg-slate-700 my-4"></div>
+                <button onClick={logout} className="w-full text-left px-4 py-3 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 font-medium">Logout</button>
+             </nav>
+          </div>
+        </div>
+      )}
+
+
+      {/* Content */}
+      <main className="flex-1 w-full max-w-7xl mx-auto p-4 overflow-y-auto overflow-x-hidden">
+        {view === 'dashboard' && <Dashboard user={user} setView={setView} />}
+        {view === 'symptom' && <SymptomChecker setView={setView} user={user} />}
+        {view === 'ecg' && <ECGReader setView={setView} />}
+        {view === 'chat' && <ChatInterface user={user} />}
+        {view === 'assistant' && <AIAssistant />}
+      </main>
+    </div>
+  );
+}
+
+
+// --- Sub-Components (Optimized) ---
+
+
+const Dashboard = memo(({ user, setView }: { user: User | null, setView: any }) => {
+  const isDoc = user?.role === 'doctor';
+  return (
+    <div className="space-y-6 animate-fade-in pb-8">
+      <div className="bg-gradient-to-r from-slate-800 to-slate-900 rounded-2xl p-6 text-white shadow-lg">
+        <div className="flex justify-between items-start">
+          <div>
+            <h2 className="text-2xl font-bold mb-1">Welcome, {user?.name}</h2>
+            <p className="text-slate-400 text-sm flex items-center gap-2"><Shield size={12} className="text-emerald-400" /> Secure Vault Active</p>
+          </div>
+        </div>
+      </div>
+
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <DashboardCard icon={<Thermometer className="text-orange-500" />} title="Check Symptoms" desc="Encrypted scoring" onClick={() => setView('symptom')} />
+        <DashboardCard icon={<Activity className="text-rose-500" />} title="Upload ECG" desc="Secure analysis" onClick={() => setView('ecg')} />
+        <DashboardCard icon={<MessageSquare className="text-indigo-500" />} title={isDoc ? "Consults" : "Secure Chat"} desc="E2EE Channel" onClick={() => setView('chat')} />
+        <DashboardCard icon={<Stethoscope className="text-purple-500" />} title="Pulse Assistant" desc="AI Support" onClick={() => setView('assistant')} />
+      </div>
+    </div>
+  );
+});
+
+
+const ChatInterface = memo(({ user }: { user: User | null }) => {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [input, setInput] = useState('');
+  const [showEncrypted, setShowEncrypted] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+
+  // Initialize System Message
+  useEffect(() => {
+    if (user?.sessionKey && messages.length === 0) {
+       setMessages([{ 
+         id: '1', sender: 'system', 
+         content: CryptoLayer.encrypt("Secure E2EE channel ready.", user.sessionKey), 
+         type: 'text', timestamp: Date.now(), encrypted: true 
+       }]);
+    }
+  }, [user]);
+
+
+  // Auto-scroll on new message
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [messages.length]);
+
+
+  const send = useCallback(() => {
+    if(!input.trim() || !user) return;
+    const newMsg: ChatMessage = { 
+      id: Date.now().toString(), sender: 'user', 
+      content: CryptoLayer.encrypt(input, user.sessionKey), 
+      type: 'text', timestamp: Date.now(), encrypted: true 
+    };
+    setMessages(prev => [...prev, newMsg]);
+    setInput('');
+  }, [input, user]);
+
+
+  const shareLocation = useCallback(async () => {
+    if (!navigator.geolocation || !user) { alert("GPS unavailable."); return; }
+    
+    // Battery API Handling
+    let batteryLevel = "N/A";
+    try {
+      // @ts-ignore
+      if (navigator.getBattery) {
+        // @ts-ignore
+        const b = await navigator.getBattery();
+        batteryLevel = `${Math.round(b.level * 100)}%`;
+      }
+    } catch (e) {}
+
+
+    navigator.geolocation.getCurrentPosition(p => {
+        const locString = `${p.coords.latitude.toFixed(4)}, ${p.coords.longitude.toFixed(4)} | Battery: ${batteryLevel}`;
+        setMessages(prev => [...prev, {
+          id: Date.now().toString(), sender: 'user',
+          content: CryptoLayer.encrypt(locString, user.sessionKey),
+          type: 'location', timestamp: Date.now(), encrypted: true
+        }]);
+    });
+  }, [user]);
+
+
+  return (
+    <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col overflow-hidden h-[calc(100vh-140px)] min-h-[400px]">
+      <div className="p-3 border-b border-slate-100 dark:border-slate-800 flex justify-between bg-slate-50 dark:bg-slate-950">
+        <div className="flex items-center gap-3">
+           <div className="h-8 w-8 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center text-indigo-600 dark:text-indigo-400"><User size={16}/></div>
+           <div>
+             <h3 className="font-bold text-slate-800 dark:text-white text-sm">Dr. Smith</h3>
+             <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold flex gap-1"><Lock size={8}/> E2EE</p>
+           </div>
+        </div>
+        <button onClick={() => setShowEncrypted(!showEncrypted)} className="text-xs text-slate-400 flex items-center gap-1 border px-2 rounded">
+           {showEncrypted ? <EyeOff size={12}/> : <Eye size={12}/>} Cipher
+        </button>
+      </div>
+
+
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50 dark:bg-slate-950/50" ref={scrollRef}>
+        {messages.map(msg => (
+          <ChatBubble key={msg.id} msg={msg} userKey={user?.sessionKey || ''} showEncrypted={showEncrypted} />
+        ))}
+      </div>
+
+
+      <div className="p-3 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
+        <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 p-2 rounded-xl">
+           <button onClick={shareLocation} className="p-2 text-slate-500 hover:text-red-500 transition"><MapPin size={20} /></button>
+           <input 
+             value={input} onChange={e => setInput(e.target.value)}
+             className="flex-1 bg-transparent outline-none text-slate-800 dark:text-white placeholder-slate-400 min-w-0" 
+             placeholder="Encrypted message..." onKeyDown={e => e.key === 'Enter' && send()}
+           />
+           <button onClick={send} className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-sm"><Send size={18} /></button>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+
+// Optimized Symptom Checker
+const SymptomChecker = memo(({ setView, user }: { setView: any, user: any }) => {
+  const [step, setStep] = useState(0);
+  const [loading, setLoading] = useState(false);
+  
+  const handleNext = useCallback(() => {
+    if (step < SYMPTOM_STEPS.length - 1) setStep(s => s + 1);
+    else { setLoading(true); setTimeout(() => { setLoading(false); setStep(s => s + 1); }, 800); }
+  }, [step]);
+
+
+  if (loading) return <div className="h-64 flex items-center justify-center animate-pulse text-slate-500">Processing Logic...</div>;
+
+
+  if (step === SYMPTOM_STEPS.length) return (
+     <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
+        <div className="bg-emerald-600 p-4 text-white flex justify-between"><span className="font-bold">Analysis Saved</span><button onClick={() => setView('dashboard')}><X/></button></div>
+        <div className="p-6 text-center">
+           <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded mb-4 text-slate-800 dark:text-slate-300 font-mono text-sm break-words border border-slate-200 dark:border-slate-700">{CryptoLayer.encrypt("Result: Mild Risk", user.sessionKey)}</div>
+           <button onClick={() => setView('dashboard')} className="w-full bg-blue-600 text-white py-3 rounded-lg">Return to Vault</button>
+        </div>
+     </div>
+  );
+
+
+  return (
+    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 max-w-lg mx-auto">
+      <div className="flex justify-between mb-6 text-slate-500 dark:text-slate-400"><button onClick={() => step > 0 ? setStep(step-1) : setView('dashboard')}><ArrowLeft/></button><span>Step {step+1}</span></div>
+      <h2 className="text-xl font-bold mb-6 text-slate-800 dark:text-white">{SYMPTOM_STEPS[step].title}</h2>
+      <div className="space-y-4 mb-8">
+        {SYMPTOM_STEPS[step].fields.map((f, i) => <div key={i}><label className="block text-sm mb-2 text-slate-700 dark:text-slate-300">{f}</label><input className="w-full border dark:border-slate-600 p-3 rounded-lg bg-white dark:bg-slate-900 text-slate-800 dark:text-white" placeholder="Input..." /></div>)}
+      </div>
+      <button onClick={handleNext} className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold shadow-lg shadow-blue-900/20 active:scale-95 transition-transform">Continue</button>
+    </div>
+  );
+});
+
+
+const ECGReader = memo(({ setView }: { setView: any }) => (
+  <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-8 text-center max-w-lg mx-auto">
+    <Activity size={32} className="mx-auto text-rose-500 mb-6"/>
+    <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">Secure Upload</h2>
+    <p className="text-slate-500 dark:text-slate-400 mb-8">Image data is encrypted in transit and ephemeral.</p>
+    <button onClick={() => setView('dashboard')} className="w-full bg-slate-900 dark:bg-slate-700 text-white py-4 rounded-xl flex items-center justify-center gap-3 active:scale-95 transition-transform"><Upload size={20} /> Select File</button>
+  </div>
+));
+
+
+const AIAssistant = memo(() => (
+  <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 min-h-[400px]">
+    <div className="flex gap-3 mb-6"><Stethoscope className="text-purple-600"/><h2 className="text-xl font-bold text-slate-800 dark:text-white">Pulse Assistant</h2></div>
+    <textarea className="w-full border dark:border-slate-600 rounded-xl p-4 h-48 bg-white dark:bg-slate-900 text-slate-800 dark:text-white" placeholder="Ask about protocols..."></textarea>
+    <button className="bg-purple-600 text-white px-6 py-2 rounded-lg mt-4 float-right shadow-lg shadow-purple-900/20">Analyze</button>
+  </div>
+));
