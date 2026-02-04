@@ -20,21 +20,37 @@ import { AuditInterceptor } from './audit/interceptors/audit.interceptor';
             envFilePath: '.env',
         }),
 
-        // Database
+        // Database - supports both DATABASE_URL (Railway) and individual vars
         TypeOrmModule.forRootAsync({
             imports: [ConfigModule],
-            useFactory: (configService: ConfigService) => ({
-                type: 'postgres',
-                host: configService.get('DB_HOST'),
-                port: configService.get('DB_PORT'),
-                username: configService.get('DB_USERNAME'),
-                password: configService.get('DB_PASSWORD'),
-                database: configService.get('DB_DATABASE'),
-                entities: [__dirname + '/**/*.entity{.ts,.js}'],
-                synchronize: configService.get('DB_SYNCHRONIZE') === 'true',
-                logging: configService.get('NODE_ENV') === 'development',
-                ssl: configService.get('NODE_ENV') === 'production' ? { rejectUnauthorized: false } : false,
-            }),
+            useFactory: (configService: ConfigService) => {
+                const databaseUrl = configService.get('DATABASE_URL');
+
+                if (databaseUrl) {
+                    // Railway provides DATABASE_URL
+                    return {
+                        type: 'postgres',
+                        url: databaseUrl,
+                        entities: [__dirname + '/**/*.entity{.ts,.js}'],
+                        synchronize: true,
+                        ssl: { rejectUnauthorized: false },
+                    };
+                }
+
+                // Local development with individual vars
+                return {
+                    type: 'postgres',
+                    host: configService.get('DB_HOST'),
+                    port: configService.get('DB_PORT'),
+                    username: configService.get('DB_USERNAME'),
+                    password: configService.get('DB_PASSWORD'),
+                    database: configService.get('DB_DATABASE'),
+                    entities: [__dirname + '/**/*.entity{.ts,.js}'],
+                    synchronize: configService.get('DB_SYNCHRONIZE') === 'true',
+                    logging: configService.get('NODE_ENV') === 'development',
+                    ssl: configService.get('NODE_ENV') === 'production' ? { rejectUnauthorized: false } : false,
+                };
+            },
             inject: [ConfigService],
         }),
 

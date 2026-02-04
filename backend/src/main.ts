@@ -66,14 +66,12 @@ async function bootstrap() {
     // API prefix
     app.setGlobalPrefix(apiPrefix);
 
-    // Auto-seed demo data in development
-    if (configService.get<string>('NODE_ENV') !== 'production') {
-        try {
-            const demoService = app.get(DemoService);
-            await demoService.seedDemoData();
-        } catch (error) {
-            console.log('⚠️ Demo seeding skipped (may already exist)');
-        }
+    // Auto-seed demo data (for demo deployment)
+    try {
+        const demoService = app.get(DemoService);
+        await demoService.seedDemoData();
+    } catch (error) {
+        console.log('⚠️ Demo seeding skipped (may already exist)');
     }
 
     // Listen on all interfaces so Android emulator can connect
