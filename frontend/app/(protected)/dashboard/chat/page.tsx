@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
 import {
     ArrowLeft,
     MessageSquare,
@@ -25,6 +24,7 @@ import {
     ROLE_PERMISSIONS
 } from '@/lib/store/auth';
 import { ConversationType } from '@/types';
+import { getStoredSession } from '@/lib/mobile-auth';
 
 interface Message {
     id: string;
@@ -84,8 +84,8 @@ const getMockConversations = (currentRole: UserRole): Conversation[] => {
 
 export default function ChatPage() {
     const router = useRouter();
-    const { data: session } = useSession();
     const { user } = useAuthStore();
+    const [mobileUser, setMobileUser] = useState<any>(null);
     const [conversations, setConversations] = useState<Conversation[]>([]);
     const [availablePartners, setAvailablePartners] = useState<ChatPartner[]>([]);
     const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
@@ -96,7 +96,14 @@ export default function ChatPage() {
     const [isLoading, setIsLoading] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    const userRole = (user?.role || session?.user?.role) as UserRole;
+    useEffect(() => {
+        const session = getStoredSession();
+        if (session?.user) {
+            setMobileUser(session.user);
+        }
+    }, []);
+
+    const userRole = (user?.role || mobileUser?.role) as UserRole;
     const isArmyOfficer = userRole === UserRole.ARMY_MEDICAL_OFFICER;
     const isPublicOfficial = userRole === UserRole.PUBLIC_MEDICAL_OFFICIAL;
 

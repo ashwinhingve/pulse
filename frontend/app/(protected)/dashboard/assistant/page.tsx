@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
 import {
     ArrowLeft,
     Stethoscope,
@@ -24,6 +23,7 @@ import {
     UserRole,
     ROLE_DISPLAY_NAMES,
 } from '@/lib/store/auth';
+import { getStoredSession, getAccessToken } from '@/lib/mobile-auth';
 
 interface Message {
     id: string;
@@ -61,9 +61,18 @@ const getQuickPrompts = (role: UserRole) => {
 
 export default function AssistantPage() {
     const router = useRouter();
-    const { data: session } = useSession();
     const { user, accessToken } = useAuthStore();
-    const userRole = (user?.role || session?.user?.role) as UserRole;
+    const [mobileUser, setMobileUser] = useState<any>(null);
+
+    useEffect(() => {
+        const session = getStoredSession();
+        if (session?.user) {
+            setMobileUser(session.user);
+        }
+    }, []);
+
+    const userRole = (user?.role || mobileUser?.role) as UserRole;
+    const token = accessToken || getAccessToken();
     const isArmyOfficer = userRole === UserRole.ARMY_MEDICAL_OFFICER;
     const isPublicOfficial = userRole === UserRole.PUBLIC_MEDICAL_OFFICIAL;
 
@@ -127,11 +136,11 @@ How can I assist you today?
         setIsLoading(true);
 
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/ai/query-protocol`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/ai/query-protocol`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${accessToken || session?.accessToken}`,
+                    'Authorization': `Bearer ${token}`,
                 },
                 body: JSON.stringify({ query: messageText }),
             });
