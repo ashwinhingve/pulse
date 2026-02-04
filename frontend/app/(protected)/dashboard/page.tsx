@@ -1,8 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
 import {
     Shield,
     Thermometer,
@@ -35,19 +34,35 @@ import {
     CLEARANCE_NAMES,
     ROLE_PERMISSIONS
 } from '@/lib/store/auth';
-import { signOut } from 'next-auth/react';
+import { isMobileBuild, mobileLogout, getStoredSession } from '@/lib/mobile-auth';
 
 export default function DashboardPage() {
     const router = useRouter();
     const { theme, setTheme } = useTheme();
-    const { data: session } = useSession();
     const { user, clearAuth } = useAuthStore();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+    const [mobileUser, setMobileUser] = useState<any>(null);
+
+    useEffect(() => {
+        if (isMobileBuild()) {
+            const session = getStoredSession();
+            if (session?.user) {
+                setMobileUser(session.user);
+            }
+        }
+    }, []);
 
     const handleLogout = async () => {
         clearAuth();
-        await signOut({ callbackUrl: '/auth/login' });
+        if (isMobileBuild()) {
+            mobileLogout();
+            router.push('/auth/login');
+        } else {
+            // Dynamic import for web-only NextAuth
+            const { signOut } = await import('next-auth/react');
+            await signOut({ callbackUrl: '/auth/login' });
+        }
     };
 
     const toggleTheme = () => {
@@ -55,7 +70,7 @@ export default function DashboardPage() {
     };
 
     // Determine user role
-    const userRole = (user?.role || session?.user?.role) as UserRole;
+    const userRole = (user?.role || mobileUser?.role) as UserRole;
     const isArmyOfficer = userRole === UserRole.ARMY_MEDICAL_OFFICER;
     const isPublicOfficial = userRole === UserRole.PUBLIC_MEDICAL_OFFICIAL;
     const isAdmin = userRole === UserRole.ADMIN;
@@ -233,8 +248,8 @@ export default function DashboardPage() {
         return 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400';
     };
 
-    const displayName = user?.fullName || session?.user?.fullName || user?.username || session?.user?.name || 'User';
-    const clearanceLevel = user?.clearanceLevel ?? session?.user?.clearanceLevel ?? ClearanceLevel.UNCLASSIFIED;
+    const displayName = user?.fullName || mobileUser?.fullName || user?.username || mobileUser?.username || 'User';
+    const clearanceLevel: ClearanceLevel = user?.clearanceLevel ?? mobileUser?.clearanceLevel ?? ClearanceLevel.UNCLASSIFIED;
 
     return (
         <div className="min-h-screen bg-background flex flex-col safe-top safe-bottom">

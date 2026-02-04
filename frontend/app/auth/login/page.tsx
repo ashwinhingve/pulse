@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, Suspense, useEffect } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Shield, Lock, User as UserIcon, Key, AlertTriangle, Loader2, Eye, EyeOff } from 'lucide-react';
+import { mobileLogin, isMobileBuild } from '@/lib/mobile-auth';
 
 function LoginForm() {
     const router = useRouter();
@@ -15,6 +16,11 @@ function LoginForm() {
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        setIsMobile(isMobileBuild());
+    }, []);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -22,23 +28,30 @@ function LoginForm() {
         setLoading(true);
 
         try {
-            const result = await signIn('credentials', {
-                username,
-                password,
-                redirect: false,
-            });
+            if (isMobile) {
+                // Mobile: Use direct API authentication
+                await mobileLogin(username, password);
+                router.push('/dashboard');
+            } else {
+                // Web: Use NextAuth
+                const result = await signIn('credentials', {
+                    username,
+                    password,
+                    redirect: false,
+                });
 
-            if (result?.error) {
-                setError(result.error === 'CredentialsSignin'
-                    ? 'Invalid username or password'
-                    : result.error
-                );
-            } else if (result?.ok) {
-                router.push(callbackUrl);
-                router.refresh();
+                if (result?.error) {
+                    setError(result.error === 'CredentialsSignin'
+                        ? 'Invalid username or password'
+                        : result.error
+                    );
+                } else if (result?.ok) {
+                    router.push(callbackUrl);
+                    router.refresh();
+                }
             }
         } catch (err: any) {
-            setError('Connection failed. Please check your network.');
+            setError(err.message || 'Connection failed. Please check your network.');
         } finally {
             setLoading(false);
         }

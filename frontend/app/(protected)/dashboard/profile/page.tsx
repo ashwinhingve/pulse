@@ -1,8 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession, signOut } from 'next-auth/react';
 import {
     Shield,
     ArrowLeft,
@@ -30,28 +29,44 @@ import {
     ROLE_DISPLAY_NAMES,
     CLEARANCE_NAMES,
 } from '@/lib/store/auth';
+import { isMobileBuild, mobileLogout, getStoredSession } from '@/lib/mobile-auth';
 
 export default function ProfilePage() {
     const router = useRouter();
-    const { data: session } = useSession();
     const { user, clearAuth } = useAuthStore();
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+    const [mobileUser, setMobileUser] = useState<any>(null);
+
+    useEffect(() => {
+        if (isMobileBuild()) {
+            const session = getStoredSession();
+            if (session?.user) {
+                setMobileUser(session.user);
+            }
+        }
+    }, []);
 
     const handleLogout = async () => {
         clearAuth();
-        await signOut({ callbackUrl: '/auth/login' });
+        if (isMobileBuild()) {
+            mobileLogout();
+            router.push('/auth/login');
+        } else {
+            const { signOut } = await import('next-auth/react');
+            await signOut({ callbackUrl: '/auth/login' });
+        }
     };
 
     // Get user data
-    const userRole = (user?.role || session?.user?.role) as UserRole;
+    const userRole = (user?.role || mobileUser?.role) as UserRole;
     const isArmyOfficer = userRole === UserRole.ARMY_MEDICAL_OFFICER;
     const isPublicOfficial = userRole === UserRole.PUBLIC_MEDICAL_OFFICIAL;
     const isAdmin = userRole === UserRole.ADMIN;
 
-    const displayName = user?.fullName || session?.user?.name || user?.username || session?.user?.username || 'User';
-    const username = user?.username || session?.user?.username || 'unknown';
-    const clearanceLevel = user?.clearanceLevel ?? session?.user?.clearanceLevel ?? ClearanceLevel.UNCLASSIFIED;
-    const department = user?.department || 'Not assigned';
+    const displayName = user?.fullName || mobileUser?.fullName || user?.username || mobileUser?.username || 'User';
+    const username = user?.username || mobileUser?.username || 'unknown';
+    const clearanceLevel: ClearanceLevel = user?.clearanceLevel ?? mobileUser?.clearanceLevel ?? ClearanceLevel.UNCLASSIFIED;
+    const department = user?.department || mobileUser?.department || 'Not assigned';
     const metadata = user?.metadata || {};
 
     const getRoleBadgeStyle = () => {
@@ -355,7 +370,7 @@ export default function ProfilePage() {
                             </div>
                             <div>
                                 <h3 className="text-lg font-semibold text-foreground">Sign Out?</h3>
-                                <p className="text-sm text-muted-foreground">You'll need to sign in again</p>
+                                <p className="text-sm text-muted-foreground">You will need to sign in again</p>
                             </div>
                         </div>
 

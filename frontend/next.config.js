@@ -1,12 +1,26 @@
 /** @type {import('next').NextConfig} */
+const isMobileBuild = process.env.MOBILE_BUILD === 'true';
+
 const nextConfig = {
     reactStrictMode: true,
     swcMinify: true,
-    // Note: Removed 'output: export' to support middleware for authentication
-    // For Capacitor, we'll use a different build approach
+    // Enable static export for mobile builds (Capacitor)
+    // Web builds use middleware for authentication
+    ...(isMobileBuild && {
+        output: 'export',
+        // Disable image optimization for static export
+        images: { unoptimized: true },
+    }),
     images: {
         unoptimized: true,
     },
+    // Exclude API routes for mobile builds (they don't work with static export)
+    ...(isMobileBuild && {
+        experimental: {
+            // Skip type checking for faster builds
+            typedRoutes: false,
+        },
+    }),
 
     // Security headers
     async headers() {

@@ -6,11 +6,11 @@ const config: CapacitorConfig = {
   webDir: 'out',
 
   server: {
-    // Force HTTPS for security
-    androidScheme: 'https',
+    // Use HTTP for development (needed for emulator to reach localhost)
+    androidScheme: 'http',
     iosScheme: 'https',
-    // Allow cleartext only in development
-    cleartext: process.env.NODE_ENV === 'development',
+    // Allow cleartext for development
+    cleartext: true,
   },
 
   // iOS specific configurations

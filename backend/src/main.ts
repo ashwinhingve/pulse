@@ -43,9 +43,9 @@ async function bootstrap() {
         }),
     );
 
-    // CORS configuration
+    // CORS configuration - allow mobile apps from any origin
     app.enableCors({
-        origin: corsOrigin.split(','),
+        origin: true, // Allow all origins (needed for mobile apps)
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization', 'X-Device-ID'],
@@ -76,8 +76,9 @@ async function bootstrap() {
         }
     }
 
-    await app.listen(port);
-    console.log(`🚀 PulseLogic Backend running on: http://localhost:${port}/${apiPrefix}`);
+    // Listen on all interfaces so Android emulator can connect
+    await app.listen(port, '0.0.0.0');
+    console.log(`🚀 PulseLogic Backend running on: http://0.0.0.0:${port}/${apiPrefix}`);
     console.log(`🔒 Security: Helmet enabled, CORS: ${corsOrigin}`);
     console.log(`📋 Demo users: dr.smith, medic.jones, spec.wilson, admin (Password: Demo123!)`);
 }
