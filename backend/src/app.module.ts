@@ -2,11 +2,15 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { AuditModule } from './audit/audit.module';
 import { AiModule } from './ai/ai.module';
 import { ChatModule } from './chat/chat.module';
+import { MedicalModule } from './medical/medical.module';
+import { DemoModule } from './demo/demo.module';
+import { AuditInterceptor } from './audit/interceptors/audit.interceptor';
 
 @Module({
     imports: [
@@ -37,10 +41,10 @@ import { ChatModule } from './chat/chat.module';
         // Rate limiting
         ThrottlerModule.forRootAsync({
             imports: [ConfigModule],
-            useFactory: (configService: ConfigService) => ({
+            useFactory: (configService: ConfigService) => ([{
                 ttl: configService.get('RATE_LIMIT_TTL', 60),
                 limit: configService.get('RATE_LIMIT_MAX', 100),
-            }),
+            }]),
             inject: [ConfigService],
         }),
 
@@ -50,6 +54,15 @@ import { ChatModule } from './chat/chat.module';
         AuditModule,
         AiModule,
         ChatModule,
+        MedicalModule,
+        DemoModule,
+    ],
+    providers: [
+        // Global audit interceptor
+        {
+            provide: APP_INTERCEPTOR,
+            useClass: AuditInterceptor,
+        },
     ],
 })
 export class AppModule { }

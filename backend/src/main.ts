@@ -3,6 +3,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
+import { DemoService } from './demo/demo.service';
 
 async function bootstrap() {
     const app = await NestFactory.create(AppModule, {
@@ -65,9 +66,20 @@ async function bootstrap() {
     // API prefix
     app.setGlobalPrefix(apiPrefix);
 
+    // Auto-seed demo data in development
+    if (configService.get<string>('NODE_ENV') !== 'production') {
+        try {
+            const demoService = app.get(DemoService);
+            await demoService.seedDemoData();
+        } catch (error) {
+            console.log('⚠️ Demo seeding skipped (may already exist)');
+        }
+    }
+
     await app.listen(port);
     console.log(`🚀 PulseLogic Backend running on: http://localhost:${port}/${apiPrefix}`);
     console.log(`🔒 Security: Helmet enabled, CORS: ${corsOrigin}`);
+    console.log(`📋 Demo users: dr.smith, medic.jones, spec.wilson, admin (Password: Demo123!)`);
 }
 
 bootstrap();

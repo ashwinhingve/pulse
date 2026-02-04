@@ -51,7 +51,7 @@ export class AuthService {
         if (!user) {
             await this.auditService.log({
                 action: 'login_failed',
-                userId: null,
+                userId: undefined,
                 username: loginDto.username,
                 ipAddress,
                 success: false,
@@ -139,7 +139,7 @@ export class AuthService {
         });
 
         // Generate QR code
-        const qrCode = await QRCode.toDataURL(secret.otpauth_url);
+        const qrCode = await QRCode.toDataURL(secret.otpauth_url || '');
 
         return {
             secret: secret.base32,

@@ -1,56 +1,39 @@
-import {
-    Controller,
-    Post,
-    Body,
-    UseGuards,
-    Request,
-} from '@nestjs/common';
-import { Throttle } from '@nestjs/throttler';
+import { Controller, Post, Body, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { ClearanceGuard } from '../auth/guards/clearance.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
-import { UserRole } from '../common/enums/roles.enum';
+import { RequireClearance } from '../auth/decorators/clearance.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { UserRole, ClearanceLevel } from '../common/enums/roles.enum';
 import { AiService } from './ai.service';
-import { PatientData } from './anonymizer.service';
 
 @Controller('ai')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, ClearanceGuard)
 export class AiController {
-    constructor(private aiService: AiService) { }
+    constructor(private readonly aiService: AiService) { }
 
     @Post('analyze-symptoms')
-    @Roles(UserRole.DOCTOR, UserRole.MEDIC, UserRole.PUBLIC)
-    @Throttle(20, 3600) // 20 requests per hour
-    async analyzeSymptoms(@Request() req, @Body() data: PatientData) {
-        return this.aiService.analyzeSymptoms({
-            type: 'symptom-analysis',
-            data,
-            userId: req.user.userId,
-            username: req.user.username,
-        });
-    }
-
-    @Post('analyze-ecg')
-    @Roles(UserRole.DOCTOR, UserRole.MEDIC)
-    @Throttle(10, 3600) // 10 requests per hour
-    async analyzeEcg(@Request() req, @Body() data: any) {
-        return this.aiService.analyzeEcg({
-            type: 'ecg-analysis',
-            data,
-            userId: req.user.userId,
-            username: req.user.username,
-        });
+    @Roles(UserRole.ARMY_MEDICAL_OFFICER, UserRole.PUBLIC_MEDICAL_OFFICIAL, UserRole.ADMIN)
+    @RequireClearance(ClearanceLevel.CONFIDENTIAL)
+    async analyzeSymptoms(
+        @Body() data: {
+            symptoms: string;
+            vitals?: Record<string, any>;
+            medicalHistory?: string;
+        },
+        @CurrentUser() user: any,
+    ) {
+        return this.aiService.analyzeSymptoms(data);
     }
 
     @Post('query-protocol')
-    @Roles(UserRole.DOCTOR, UserRole.MEDIC)
-    @Throttle(30, 3600) // 30 requests per hour
-    async queryProtocol(@Request() req, @Body('query') query: string) {
-        return this.aiService.queryProtocol(query, {
-            type: 'protocol-query',
-            data: query,
-            userId: req.user.userId,
-            username: req.user.username,
-        });
+    @Roles(UserRole.ARMY_MEDICAL_OFFICER, UserRole.PUBLIC_MEDICAL_OFFICIAL, UserRole.ADMIN)
+    @RequireClearance(ClearanceLevel.UNCLASSIFIED)
+    async queryProtocol(
+        @Body() data: { query: string },
+        @CurrentUser() user: any,
+    ) {
+        return this.aiService.queryProtocol(data.query);
     }
 }

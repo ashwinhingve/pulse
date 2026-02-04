@@ -1,103 +1,145 @@
-# 🚀 Quick Start - PulseLogic Development
+# PulseLogic MVP - Quick Start Guide
 
-## ⚠️ IMPORTANT: Docker Desktop Required
+## 🚀 5-Minute Setup
 
-**Before running any commands, make sure Docker Desktop is installed and running!**
+### Prerequisites
+- Node.js 18+
+- Docker Desktop (running)
+- Git
 
-### Step 1: Start Docker Desktop
-
-1. Open **Docker Desktop** from your Start Menu
-2. Wait for the whale icon in system tray to be steady (not animated)
-3. Verify it's running: `docker --version`
-
-If not installed: https://www.docker.com/products/docker-desktop/
-
----
-
-## 🎯 Quick Setup Commands
-
-### Option A: Automated Setup (Recommended)
-
+### Step 1: Start Database
 ```powershell
-# Run the setup script
-.\setup.ps1
-```
-
-### Option B: Manual Setup
-
-```powershell
-# 1. Start databases
-docker-compose up -d
-
-# 2. Backend setup
-cd backend
-npm install
-# .env file is already created with defaults
-
-# 3. Frontend setup  
-cd ../frontend
-npm install
-# .env.local file is already created
-
-# 4. Start backend (Terminal 1)
-cd backend
-npm run start:dev
-
-# 5. Start frontend (Terminal 2)
-cd frontend
-npm run dev
-```
-
----
-
-## ✅ Access the Application
-
-- **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:3001/api
-
----
-
-## 🔧 Common Issues
-
-### "Cannot find file dockerDesktopLinuxEngine"
-**Solution**: Start Docker Desktop and wait for it to fully initialize
-
-### "Port already in use"
-```powershell
-# Stop existing containers
-docker-compose down
-
-# Start again
 docker-compose up -d
 ```
 
-### Frontend won't start
-```powershell
-cd frontend
-rm -r node_modules
-npm install
-npm run dev
-```
-
-### Backend won't start
+### Step 2: Start Backend
 ```powershell
 cd backend
-rm -r node_modules
 npm install
 npm run start:dev
 ```
+**Expected:** Server on http://localhost:3001
+
+### Step 3: Start Frontend
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+**Expected:** App on http://localhost:3000
 
 ---
 
-## 📚 Full Documentation
+## 📱 Mobile Build (Capacitor)
 
-See **[SETUP_GUIDE.md](file:///d:/Do%20Not%20Open/New%20folder/SETUP_GUIDE.md)** for detailed troubleshooting and cloud database alternatives.
+### Build for Mobile
+```powershell
+cd frontend
+npm run mobile:build
+```
+
+### Open in Xcode (iOS)
+```powershell
+npm run mobile:ios
+```
+
+### Open in Android Studio
+```powershell
+npm run mobile:android
+```
 
 ---
 
-## 🎉 You're Ready!
+## 🔐 Test Credentials
 
-Once both servers are running:
-1. Open http://localhost:3000
-2. You'll see the login page
-3. Use test credentials from README.md (development only)
+Create via backend API:
+```powershell
+curl -X POST http://localhost:3001/api/auth/register `
+  -H "Content-Type: application/json" `
+  -d '{
+    "username": "testdoc",
+    "password": "Test123!",
+    "role": "doctor",
+    "clearanceLevel": 2
+  }'
+```
+
+---
+
+## 🤖 AI Features (Demo)
+
+To enable Gemini AI:
+1. Get API key from https://makersuite.google.com/app/apikey
+2. Update `backend/.env`: `GEMINI_API_KEY=your_key_here`
+3. Restart backend
+
+**Note:** AI is server-side only with anonymization layer.
+
+---
+
+## 📊 Architecture
+
+```
+CLIENT (Mobile/Desktop)
+  ↓ HTTPS
+SERVER (Auth + AI Gateway)
+  ↓ Anonymized
+AI + DATA LAYER
+```
+
+**Security:**
+- ✅ Zero-trust API
+- ✅ Role + Clearance based access
+- ✅ PII/PHI anonymization
+- ✅ Audit logging
+- ✅ Rate limiting
+
+---
+
+## 🛠️ Build Commands
+
+| Command | Purpose |
+|---------|---------|
+| `npm run dev` | Development server |
+| `npm run build` | Production build |
+| `npm run mobile:build` | Build + sync mobile |
+| `npm run mobile:ios` | Open iOS project |
+| `npm run mobile:android` | Open Android project |
+
+---
+
+## ⚠️ Important Notes
+
+1. **MVP Demo** - Not production-ready
+2. **Change all secrets** before deployment
+3. **DB_SYNCHRONIZE=false** in production
+4. **AI is decision support only** - not diagnosis
+5. **No patient identity to AI** - enforced by anonymization
+
+---
+
+## 📞 Troubleshooting
+
+**Docker not running:**
+```powershell
+# Start Docker Desktop, then:
+docker-compose up -d
+```
+
+**Port conflicts:**
+```powershell
+# Kill process on port
+netstat -ano | findstr :3000
+taskkill /PID <PID> /F
+```
+
+**Build errors:**
+```powershell
+# Clean install
+rm -r node_modules
+npm install
+```
+
+---
+
+**Built for military medical professionals with security-first design.**

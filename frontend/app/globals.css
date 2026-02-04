@@ -4,48 +4,90 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Medical Professional Light Theme */
+    --background: 210 20% 98%;
+    --foreground: 215 25% 15%;
+
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 215 25% 15%;
+
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-    --radius: 0.5rem;
+    --popover-foreground: 215 25% 15%;
+
+    /* Primary: Medical Teal */
+    --primary: 175 77% 35%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary: Navy */
+    --secondary: 215 50% 95%;
+    --secondary-foreground: 215 50% 25%;
+
+    --muted: 210 20% 96%;
+    --muted-foreground: 215 20% 45%;
+
+    /* Accent: Emerald */
+    --accent: 160 60% 45%;
+    --accent-foreground: 0 0% 100%;
+
+    /* Destructive: Medical Alert Red */
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Warning: Amber */
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    /* Success: Green */
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+
+    --border: 214 20% 90%;
+    --input: 214 20% 90%;
+    --ring: 175 77% 35%;
+    --radius: 0.75rem;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
+    /* Medical Professional Dark Theme */
+    --background: 220 25% 8%;
+    --foreground: 210 15% 95%;
+
+    --card: 220 25% 12%;
+    --card-foreground: 210 15% 95%;
+
+    --popover: 220 25% 10%;
+    --popover-foreground: 210 15% 95%;
+
+    /* Primary: Bright Teal */
+    --primary: 175 65% 50%;
+    --primary-foreground: 220 25% 8%;
+
+    /* Secondary: Muted Navy */
+    --secondary: 220 25% 18%;
+    --secondary-foreground: 210 15% 85%;
+
+    --muted: 220 20% 16%;
+    --muted-foreground: 215 15% 60%;
+
+    /* Accent: Bright Emerald */
+    --accent: 160 55% 50%;
+    --accent-foreground: 220 25% 8%;
+
+    /* Destructive: Alert Red */
+    --destructive: 0 65% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Warning: Amber */
+    --warning: 38 85% 55%;
+    --warning-foreground: 220 25% 8%;
+
+    /* Success: Green */
+    --success: 142 65% 50%;
+    --success-foreground: 220 25% 8%;
+
+    --border: 220 20% 20%;
+    --input: 220 20% 20%;
+    --ring: 175 65% 50%;
   }
 }
 
@@ -53,7 +95,262 @@
   * {
     @apply border-border;
   }
-  body {
-    @apply bg-background text-foreground;
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
   }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  /* Better focus styles for accessibility */
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+}
+
+@layer components {
+  /* Primary Button */
+  .btn-primary {
+    @apply bg-primary text-primary-foreground hover:bg-primary/90;
+    @apply px-6 py-3 rounded-xl font-semibold;
+    @apply transition-all duration-200 ease-out;
+    @apply active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply min-h-[48px] flex items-center justify-center gap-2;
+  }
+
+  /* Secondary Button */
+  .btn-secondary {
+    @apply bg-secondary text-secondary-foreground hover:bg-secondary/80;
+    @apply px-6 py-3 rounded-xl font-semibold;
+    @apply transition-all duration-200 ease-out;
+    @apply active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply border border-border;
+    @apply min-h-[48px] flex items-center justify-center gap-2;
+  }
+
+  /* Danger Button */
+  .btn-danger {
+    @apply bg-destructive text-destructive-foreground hover:bg-destructive/90;
+    @apply px-6 py-3 rounded-xl font-semibold;
+    @apply transition-all duration-200 ease-out;
+    @apply active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply min-h-[48px] flex items-center justify-center gap-2;
+  }
+
+  /* Card Component */
+  .card {
+    @apply bg-card text-card-foreground;
+    @apply rounded-2xl border border-border;
+    @apply shadow-sm hover:shadow-md transition-shadow duration-200;
+  }
+
+  /* Input Field */
+  .input-field {
+    @apply w-full px-4 py-3 rounded-xl;
+    @apply bg-background border border-input;
+    @apply text-foreground placeholder:text-muted-foreground;
+    @apply focus:border-primary focus:ring-2 focus:ring-primary/20;
+    @apply transition-all duration-200;
+    @apply min-h-[48px];
+  }
+
+  /* Badge - Severity Levels */
+  .badge-critical {
+    @apply bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400;
+    @apply px-3 py-1 rounded-full text-xs font-bold uppercase;
+  }
+
+  .badge-urgent {
+    @apply bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400;
+    @apply px-3 py-1 rounded-full text-xs font-bold uppercase;
+  }
+
+  .badge-routine {
+    @apply bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400;
+    @apply px-3 py-1 rounded-full text-xs font-bold uppercase;
+  }
+
+  /* Status Indicator */
+  .status-active {
+    @apply flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400;
+  }
+
+  .status-active::before {
+    content: '';
+    @apply w-2 h-2 rounded-full bg-emerald-500 animate-pulse;
+  }
+
+  /* Secure Badge */
+  .secure-badge {
+    @apply inline-flex items-center gap-1.5;
+    @apply px-2.5 py-1 rounded-full;
+    @apply bg-emerald-50 dark:bg-emerald-900/20;
+    @apply text-emerald-700 dark:text-emerald-400;
+    @apply text-xs font-medium;
+  }
+
+  /* Demo Warning Banner */
+  .demo-banner {
+    @apply bg-amber-50 dark:bg-amber-900/20;
+    @apply border border-amber-200 dark:border-amber-800;
+    @apply rounded-lg p-4;
+    @apply flex items-start gap-3;
+  }
+
+  .demo-banner-icon {
+    @apply text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5;
+  }
+
+  .demo-banner-text {
+    @apply text-sm text-amber-800 dark:text-amber-200;
+  }
+}
+
+@layer utilities {
+  /* Mobile-first container */
+  .container-app {
+    @apply px-4 py-4 max-w-7xl mx-auto;
+  }
+
+  @media (min-width: 768px) {
+    .container-app {
+      @apply px-6 py-6;
+    }
+  }
+
+  /* Touch-friendly tap targets (minimum 48x48px for accessibility) */
+  .touch-target {
+    @apply min-h-[48px] min-w-[48px];
+  }
+
+  /* Prevent zoom on input focus (iOS) */
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+
+  /* Safe area padding for notched devices */
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .safe-left {
+    padding-left: env(safe-area-inset-left);
+  }
+
+  .safe-right {
+    padding-right: env(safe-area-inset-right);
+  }
+
+  .safe-all {
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+
+  /* Scrollbar styling */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 3px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-foreground) / 0.5);
+  }
+
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hidden {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hidden::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Gradient backgrounds */
+  .gradient-medical {
+    @apply bg-gradient-to-br from-primary/10 via-accent/5 to-background;
+  }
+
+  .gradient-hero {
+    @apply bg-gradient-to-r from-slate-800 to-slate-900 dark:from-slate-900 dark:to-slate-800;
+  }
+
+  /* Glass effect */
+  .glass {
+    @apply bg-white/80 dark:bg-slate-900/80 backdrop-blur-md;
+  }
+
+  /* Skeleton loading */
+  .skeleton {
+    @apply animate-pulse bg-muted rounded;
+  }
+}
+
+/* Animation Keyframes */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.4s ease-out;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.2s ease-out;
 }

@@ -16,6 +16,9 @@ export interface AuditLogData {
     success: boolean;
     errorMessage?: string;
     metadata?: Record<string, any>;
+    details?: any; // For additional request/response data
+    duration?: number; // Request duration in ms
+    error?: string; // Error message if failed
 }
 
 @Injectable()
@@ -27,10 +30,12 @@ export class AuditService {
 
     async log(data: AuditLogData): Promise<AuditLog> {
         // Get previous log for hash chain
-        const previousLog = await this.auditLogRepository.findOne({
+        const previousLogs = await this.auditLogRepository.find({
             order: { timestamp: 'DESC' },
+            take: 1,
         });
 
+        const previousLog = previousLogs[0];
         const previousHash = previousLog?.currentHash || '0';
 
         // Create hash of current log

@@ -2,6 +2,11 @@
 const nextConfig = {
     reactStrictMode: true,
     swcMinify: true,
+    // Note: Removed 'output: export' to support middleware for authentication
+    // For Capacitor, we'll use a different build approach
+    images: {
+        unoptimized: true,
+    },
 
     // Security headers
     async headers() {

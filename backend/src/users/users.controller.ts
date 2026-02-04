@@ -31,13 +31,13 @@ export class UsersController {
     }
 
     @Get()
-    @Roles(UserRole.ADMIN, UserRole.DOCTOR)
+    @Roles(UserRole.ADMIN, UserRole.ARMY_MEDICAL_OFFICER)
     findAll() {
         return this.usersService.findAll();
     }
 
     @Get(':id')
-    @Roles(UserRole.ADMIN, UserRole.DOCTOR)
+    @Roles(UserRole.ADMIN, UserRole.ARMY_MEDICAL_OFFICER)
     findOne(@Param('id') id: string) {
         return this.usersService.findOne(id);
     }

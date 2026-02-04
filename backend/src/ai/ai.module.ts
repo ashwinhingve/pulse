@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
 import { AiService } from './ai.service';
-import { AnonymizerService } from './anonymizer.service';
+import { AnonymizationService } from './anonymization.service';
 import { AiController } from './ai.controller';
 import { AuditModule } from '../audit/audit.module';
 
 @Module({
     imports: [AuditModule],
-    providers: [AiService, AnonymizerService],
+    providers: [AiService, AnonymizationService],
     controllers: [AiController],
     exports: [AiService],
 })

@@ -22,10 +22,13 @@ export class User {
     @Exclude()
     passwordHash: string;
 
+    @Column({ nullable: true })
+    fullName: string;
+
     @Column({
         type: 'enum',
         enum: UserRole,
-        default: UserRole.PUBLIC,
+        default: UserRole.PUBLIC_MEDICAL_OFFICIAL,
     })
     role: UserRole;
 
@@ -34,6 +37,19 @@ export class User {
         default: ClearanceLevel.UNCLASSIFIED,
     })
     clearanceLevel: ClearanceLevel;
+
+    @Column({ nullable: true })
+    department: string;
+
+    @Column({ type: 'jsonb', nullable: true })
+    metadata: {
+        rank?: string;
+        serviceNumber?: string;
+        title?: string;
+        licenseNumber?: string;
+        specialization?: string;
+        unit?: string;
+    };
 
     @Column({ nullable: true })
     @Exclude()

@@ -5,6 +5,7 @@ import {
     IsNotEmpty,
     MinLength,
     IsOptional,
+    IsObject,
 } from 'class-validator';
 import { UserRole, ClearanceLevel } from '../../common/enums/roles.enum';
 
@@ -18,6 +19,10 @@ export class CreateUserDto {
     @MinLength(8)
     password: string;
 
+    @IsString()
+    @IsOptional()
+    fullName?: string;
+
     @IsEnum(UserRole)
     @IsOptional()
     role?: UserRole;
@@ -25,4 +30,19 @@ export class CreateUserDto {
     @IsInt()
     @IsOptional()
     clearanceLevel?: ClearanceLevel;
+
+    @IsString()
+    @IsOptional()
+    department?: string;
+
+    @IsObject()
+    @IsOptional()
+    metadata?: {
+        rank?: string;
+        serviceNumber?: string;
+        title?: string;
+        licenseNumber?: string;
+        specialization?: string;
+        unit?: string;
+    };
 }
