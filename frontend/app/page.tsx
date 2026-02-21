@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+
 import {
     Shield, ArrowRight, Users, Activity, FileText,
     Bot, ChevronRight, Heart, Lock, Stethoscope,
@@ -60,7 +61,10 @@ const fadeUp = {
 
 export default function LandingPage() {
     return (
-        <div className="min-h-screen bg-mesh-gradient relative overflow-hidden">
+        <div
+            className="min-h-screen bg-mesh-gradient relative overflow-hidden"
+            style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 1.25rem)' }}
+        >
             <FloatingShapes />
 
             {/* ── Navbar ── */}

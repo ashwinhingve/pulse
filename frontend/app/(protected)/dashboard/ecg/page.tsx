@@ -9,6 +9,10 @@ import PageHeader from '@/components/ui/PageHeader';
 import FormTextarea from '@/components/ui/FormTextarea';
 import ErrorBanner from '@/components/ui/ErrorBanner';
 import Badge from '@/components/ui/Badge';
+import { useAuthStore } from '@/lib/store/auth';
+import { getAccessToken } from '@/lib/mobile-auth';
+
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api').replace(/\/$/, '');
 
 interface ECGAnalysis {
     findings: string;
@@ -26,12 +30,26 @@ const URGENCY_MAP: Record<string, { variant: 'success' | 'warning' | 'danger'; l
 
 export default function ECGPage() {
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const { accessToken: storeToken } = useAuthStore();
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [preview, setPreview] = useState<string | null>(null);
     const [notes, setNotes] = useState('');
     const [analysis, setAnalysis] = useState<ECGAnalysis | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [error, setError] = useState('');
+
+    const getToken = async (): Promise<string | null> => {
+        if (storeToken) return storeToken;
+        const mobileToken = getAccessToken();
+        if (mobileToken) return mobileToken;
+        try {
+            const { getSession } = await import('next-auth/react');
+            const s = await getSession();
+            return (s as { accessToken?: string })?.accessToken ?? null;
+        } catch {
+            return null;
+        }
+    };
 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -75,14 +93,18 @@ export default function ECGPage() {
         setAnalysis(null);
 
         try {
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
-            const token = localStorage.getItem('accessToken');
+            const token = await getToken();
+            if (!token) {
+                setError('Please log in again to use ECG analysis.');
+                setIsUploading(false);
+                return;
+            }
 
-            const response = await fetch(`${apiUrl}/ai/query-protocol`, {
+            const response = await fetch(`${API_URL}/ai/query-protocol`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+                    'Authorization': `Bearer ${token}`,
                 },
                 body: JSON.stringify({
                     query: `ECG analysis requested. File: ${selectedFile.name} (${(selectedFile.size / 1024).toFixed(1)}KB, ${selectedFile.type}). Clinical notes: ${notes || 'None provided.'}. Please provide findings, interpretation, urgency level, and recommendations.`,
@@ -103,8 +125,13 @@ export default function ECGPage() {
                 recommendations: [],
                 disclaimer: 'AI-generated preliminary analysis for decision support only. Final interpretation must be made by qualified medical personnel.',
             });
-        } catch {
-            setError('Failed to analyze ECG. Please ensure the backend is reachable and try again.');
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : '';
+            if (msg.includes('fetch') || msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
+                setError('Cannot reach the server. Check your connection and that the backend is running.');
+            } else {
+                setError('Failed to analyze ECG. Please ensure the backend is reachable and try again.');
+            }
         } finally {
             setIsUploading(false);
         }

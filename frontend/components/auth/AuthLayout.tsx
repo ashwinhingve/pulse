@@ -19,7 +19,7 @@ export default function AuthLayout({
     showIllustration = true,
 }: AuthLayoutProps) {
     return (
-        <div className="min-h-screen flex safe-all">
+        <div className="min-h-screen flex safe-all" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
             {/* ── Decorative side panel (lg+) ───────────────── */}
             {showIllustration && (
                 <div className="hidden lg:flex lg:w-[45%] xl:w-[50%] relative overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 items-center justify-center">

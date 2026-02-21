@@ -1,9 +1,18 @@
 import './globals.css'
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { Inter, Manrope } from 'next/font/google'
 import { Providers } from '@/components/providers'
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({
+    subsets: ['latin'],
+    variable: '--font-inter',
+})
+
+const manrope = Manrope({
+    subsets: ['latin'],
+    variable: '--font-manrope',
+    weight: ['400', '500', '600', '700', '800'],
+})
 
 export const metadata: Metadata = {
     title: 'PulseLogic - Secure Military Medical Platform',
@@ -32,7 +41,7 @@ export default function RootLayout({
 }) {
     return (
         <html lang="en" suppressHydrationWarning>
-            <body className={inter.className}>
+            <body className={`${inter.variable} ${manrope.variable} ${inter.className}`}>
                 <Providers>{children}</Providers>
             </body>
         </html>

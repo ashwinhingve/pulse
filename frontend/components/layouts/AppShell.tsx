@@ -334,9 +334,26 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 )}
 
                 {/* ── Main content ── */}
-                <div className="flex-1 flex flex-col min-w-0 overflow-y-auto scrollbar-thin relative z-10">
+                <div className="flex-1 flex flex-col min-w-0 overflow-y-auto scrollbar-thin relative z-10 main-scroll-content">
+                    {/* ── Colored mobile top header ── */}
+                    <div className="lg:hidden sticky top-0 z-20 flex flex-col bg-gradient-to-r from-primary via-primary to-accent/90 text-white shadow-md flex-shrink-0" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+                    <div className="flex items-center h-14 px-4">
+                        <button
+                            onClick={() => setIsMobileOpen(true)}
+                            className="p-2 -ml-2 rounded-xl hover:bg-white/15 active:bg-white/25 transition-colors"
+                            aria-label="Open menu"
+                        >
+                            <Menu size={22} />
+                        </button>
+                        <div className="flex-1 flex items-center justify-center gap-2">
+                            <LogoIcon size={24} />
+                            <span className="font-bold font-display text-[15px] tracking-tight">PulseLogic</span>
+                        </div>
+                        <div className="w-10" />
+                    </div>
+                    </div>
+
                     {children}
-                    <div className="lg:hidden flex-shrink-0" style={{ height: 'calc(76px + env(safe-area-inset-bottom, 0px))' }} />
                 </div>
             </div>
 

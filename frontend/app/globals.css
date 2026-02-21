@@ -1,8 +1,15 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Manrope:wght@400;500;600;700;800&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Mobile: ensure the fixed bottom nav never hides page content.
+   Applied to the AppShell scroll container so ALL pages (subpages too)
+   always have enough space at the bottom. */
+@media (max-width: 1023px) {
+  .main-scroll-content {
+    padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+  }
+}
 
 @layer base {
   :root {

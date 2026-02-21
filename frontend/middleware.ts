@@ -14,20 +14,15 @@ const roleRoutePermissions: Record<string, string[]> = {
     MEDIC: ['/dashboard'],
 };
 
-// Public routes that don't require authentication
+// Public routes that don't require authentication (including landing at /)
 const publicRoutes = ['/auth/login', '/auth/register', '/api'];
 
 export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
-    // Allow public routes and static files
-    if (publicRoutes.some(route => pathname.startsWith(route))) {
+    // Allow public routes, root (landing), and static files
+    if (pathname === '/' || publicRoutes.some(route => pathname.startsWith(route))) {
         return NextResponse.next();
-    }
-
-    // Redirect root to login
-    if (pathname === '/') {
-        return NextResponse.redirect(new URL('/auth/login', request.url));
     }
 
     // Get session token

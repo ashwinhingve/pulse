@@ -116,10 +116,45 @@ npm run android:aab
 
 Output: `android/app/build/outputs/bundle/release/app-release.aab`
 
+## Windows: PowerShell vs CMD
+
+If you run commands **manually** in the `android` folder (e.g. to build APK/AAB), use the right syntax for your shell.
+
+### PowerShell (default in VS Code / Windows Terminal)
+
+- Run the Gradle wrapper with `.\` so the current directory is used:
+  ```powershell
+  cd frontend\android
+  .\gradlew.bat assembleRelease   # APK
+  .\gradlew.bat bundleRelease     # AAB
+  ```
+- Set environment variables with `$env:...`:
+  ```powershell
+  $env:JAVA_HOME = "C:\Program Files\Microsoft\jdk-21.0.7.6-hotspot"
+  $env:PATH = "$env:JAVA_HOME\bin;$env:PATH"
+  ```
+
+### Command Prompt (CMD)
+
+- You can run `gradlew.bat` without `.\`.
+- Set env vars with `set`:
+  ```cmd
+  set JAVA_HOME=C:\Program Files\Microsoft\jdk-21.0.7.6-hotspot
+  set PATH=%JAVA_HOME%\bin;%PATH%
+  ```
+
+**Recommendation:** Prefer the npm scripts so the shell doesn’t matter:
+```bash
+npm run android:build
+npm run android:apk    # or  npm run android:aab
+```
+
 ## Troubleshooting
 
 | Issue | Solution |
 |-------|----------|
+| `gradlew.bat` not recognized (PowerShell) | Use `.\gradlew.bat` so the script in the current folder runs |
+| `%PATH%` or `set` not working | You’re in PowerShell; use `$env:PATH` and `$env:JAVA_HOME` instead of `set` |
 | `ANDROID_HOME not set` | Set env var to SDK location |
 | `SDK not found` | Install via Android Studio SDK Manager |
 | Emulator won't start | Enable VT-x/AMD-V in BIOS |

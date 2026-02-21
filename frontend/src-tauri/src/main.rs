@@ -1,9 +1,16 @@
-// Prevents additional console window on Windows in release
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+use std::fs::OpenOptions;
+use std::io::Write;
 
-// Manager trait needed for get_webview_window (debug builds only)
-#[cfg(debug_assertions)]
-use tauri::Manager;
+/// Write startup diagnostics to %TEMP%\pulselogic.log
+fn startup_log(msg: &str) {
+    let temp = std::env::var("TEMP")
+        .or_else(|_| std::env::var("TMP"))
+        .unwrap_or_else(|_| "C:\\Temp".to_string());
+    let path = format!("{}\\pulselogic.log", temp);
+    if let Ok(mut f) = OpenOptions::new().create(true).append(true).open(&path) {
+        let _ = writeln!(f, "{}", msg);
+    }
+}
 
 #[tauri::command]
 fn get_app_version() -> String {
@@ -11,23 +18,27 @@ fn get_app_version() -> String {
 }
 
 fn main() {
-    tauri::Builder::default()
+    startup_log("=== PulseLogic v1.0.0 starting ===");
+
+    let result = tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_process::init())
-        .plugin(tauri_plugin_notification::init())
         .invoke_handler(tauri::generate_handler![get_app_version])
         .setup(|_app| {
-            // Open DevTools automatically in debug builds
-            #[cfg(debug_assertions)]
-            {
-                let window = _app.get_webview_window("main").unwrap();
-                window.open_devtools();
-            }
+            startup_log("Setup complete — window is now visible");
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .run(tauri::generate_context!());
+
+    match result {
+        Ok(_) => startup_log("Application exited normally"),
+        Err(e) => {
+            let msg = format!("FATAL ERROR: {}", e);
+            startup_log(&msg);
+            eprintln!("{}", msg);
+        }
+    }
 }

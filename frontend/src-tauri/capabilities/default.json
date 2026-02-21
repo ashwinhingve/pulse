@@ -1,0 +1,15 @@
+{
+  "identifier": "default",
+  "description": "Default capabilities for PulseLogic desktop app",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "shell:allow-open",
+    "fs:default",
+    "fs:allow-read",
+    "fs:allow-write",
+    "http:default",
+    "os:default",
+    "process:allow-exit"
+  ]
+}
