@@ -162,7 +162,7 @@ export default function DashboardPage() {
     return (
         <div className="flex flex-col min-h-full safe-top">
             {/* ── Header ── */}
-            <header className="sticky top-0 z-30 h-16 flex-shrink-0 border-b border-border/40" style={{ background: 'var(--glass-bg)', backdropFilter: 'blur(20px)' }}>
+            <header className="relative lg:sticky lg:top-0 z-30 h-16 flex-shrink-0 border-b border-border/40" style={{ background: 'var(--glass-bg)', backdropFilter: 'blur(20px)' }}>
                 <div className="h-full px-4 lg:px-6 flex items-center justify-between max-w-7xl mx-auto">
                     <div className="flex items-center gap-3">
                         <button onClick={openMobile} className="p-2 hover:bg-muted/50 rounded-xl lg:hidden touch-target" aria-label="Open menu">

@@ -22,7 +22,7 @@ export default function PageHeader({
     const router = useRouter();
 
     return (
-        <header className={cn('sticky top-0 z-30 h-16 flex-shrink-0 border-b border-border/40 bg-card/80 backdrop-blur-xl', className)}>
+        <header className={cn('relative lg:sticky lg:top-0 z-30 h-16 flex-shrink-0 border-b border-border/40 bg-card/80 backdrop-blur-xl', className)}>
             <div className="h-full px-4 lg:px-6 flex items-center justify-between max-w-7xl mx-auto">
                 <div className="flex items-center gap-3">
                     <button

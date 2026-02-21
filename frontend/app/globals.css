@@ -9,6 +9,19 @@
   .main-scroll-content {
     padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px));
   }
+
+  /* Landing page mobile colored header area */
+  body:has(nav + section + section#stats) nav {
+    background: linear-gradient(to right, hsl(var(--primary)), hsl(var(--primary)), hsl(var(--accent) / 0.9));
+    color: white;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  }
+
+  body:has(nav + section + section#stats) nav a,
+  body:has(nav + section + section#stats) nav span,
+  body:has(nav + section + section#stats) nav .text-foreground {
+    color: white !important;
+  }
 }
 
 @layer base {

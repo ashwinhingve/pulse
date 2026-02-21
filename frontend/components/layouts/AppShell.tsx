@@ -336,20 +336,20 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 {/* ── Main content ── */}
                 <div className="flex-1 flex flex-col min-w-0 overflow-y-auto scrollbar-thin relative z-10 main-scroll-content">
                     {/* ── Colored mobile top header ── */}
-                    <div className="lg:hidden sticky top-0 z-20 flex flex-col bg-gradient-to-r from-primary via-primary to-accent/90 text-white shadow-md flex-shrink-0" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
-                    <div className="flex items-center h-14 px-4">
+                    <div className="lg:hidden relative z-20 flex flex-col bg-gradient-to-r from-primary via-primary to-accent/90 text-white shadow-md flex-shrink-0" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+                    <div className="flex items-center h-12 px-4">
                         <button
                             onClick={() => setIsMobileOpen(true)}
-                            className="p-2 -ml-2 rounded-xl hover:bg-white/15 active:bg-white/25 transition-colors"
+                            className="p-1.5 -ml-1 rounded-xl hover:bg-white/15 active:bg-white/25 transition-colors"
                             aria-label="Open menu"
                         >
-                            <Menu size={22} />
+                            <Menu size={20} />
                         </button>
                         <div className="flex-1 flex items-center justify-center gap-2">
-                            <LogoIcon size={24} />
-                            <span className="font-bold font-display text-[15px] tracking-tight">PulseLogic</span>
+                            <LogoIcon size={20} />
+                            <span className="font-bold font-display text-[14px] tracking-tight">PulseLogic</span>
                         </div>
-                        <div className="w-10" />
+                        <div className="w-8" />
                     </div>
                     </div>
 
