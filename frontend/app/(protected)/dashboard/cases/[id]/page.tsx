@@ -3,12 +3,12 @@
 import CaseDetailClient from './CaseDetailClient';
 
 export function generateStaticParams() {
-    // Empty = generate no static pages for this route
-    // The page is accessed via client-side navigation in Capacitor
-    return [];
+    // Return a placeholder so Next.js 14.1 treats this as having static params.
+    // In Capacitor, all navigation is client-side — real IDs load via JS.
+    // next/dist/build/index.js checks `prerenderRoutes.length` (truthy),
+    // so an empty array is incorrectly treated as "missing generateStaticParams".
+    return [{ id: 'index' }];
 }
-
-export const dynamicParams = false;
 
 export default function CaseDetailPage({ params }: { params: { id: string } }) {
     return <CaseDetailClient />;

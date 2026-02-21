@@ -1,6 +1,8 @@
 // Prevents additional console window on Windows in release
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+// Manager trait needed for get_webview_window (debug builds only)
+#[cfg(debug_assertions)]
 use tauri::Manager;
 
 #[tauri::command]
@@ -15,14 +17,13 @@ fn main() {
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_process::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_notification::init())
         .invoke_handler(tauri::generate_handler![get_app_version])
-        .setup(|app| {
-            // Log startup info in debug mode
+        .setup(|_app| {
+            // Open DevTools automatically in debug builds
             #[cfg(debug_assertions)]
             {
-                let window = app.get_webview_window("main").unwrap();
+                let window = _app.get_webview_window("main").unwrap();
                 window.open_devtools();
             }
             Ok(())

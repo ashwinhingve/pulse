@@ -30,7 +30,7 @@ interface MedicalCaseDetail {
 export default function CaseDetailPage() {
     const router = useRouter();
     const params = useParams();
-    const id = params.id as string;
+    const id = (params?.id ?? '') as string;
 
     const [caseData, setCaseData] = useState<MedicalCaseDetail | null>(null);
     const [loading, setLoading] = useState(true);

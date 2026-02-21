@@ -5,8 +5,8 @@ import { SessionProvider } from 'next-auth/react'
 import { ThemeProvider } from 'next-themes'
 import { useState } from 'react'
 
-// Check if mobile build at module level
-const isMobile = process.env.NEXT_PUBLIC_MOBILE_BUILD === 'true';
+// Check if mobile/desktop static build at module level
+const isStaticBuild = process.env.NEXT_PUBLIC_MOBILE_BUILD === 'true';
 
 export function Providers({ children }: { children: React.ReactNode }) {
     const [queryClient] = useState(
@@ -29,14 +29,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
         </QueryClientProvider>
     );
 
-    // For mobile builds, skip SessionProvider (uses local token storage)
-    if (isMobile) {
-        return content;
-    }
-
-    // Web build: wrap with NextAuth SessionProvider
+    // Always include SessionProvider so useSession() never throws.
+    // For static builds (mobile/desktop), disable session fetching since
+    // /api/auth/* routes don't exist in the static export.
     return (
-        <SessionProvider>
+        <SessionProvider
+            session={isStaticBuild ? null : undefined}
+            refetchInterval={isStaticBuild ? 0 : undefined}
+            refetchOnWindowFocus={!isStaticBuild}
+        >
             {content}
         </SessionProvider>
     );

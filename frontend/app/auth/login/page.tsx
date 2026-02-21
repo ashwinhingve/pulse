@@ -15,8 +15,8 @@ import AuthInput from '@/components/auth/AuthInput';
 function LoginForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
-    const justRegistered = searchParams.get('registered') === '1';
+    const callbackUrl = searchParams?.get('callbackUrl') || '/dashboard';
+    const justRegistered = searchParams?.get('registered') === '1';
 
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');

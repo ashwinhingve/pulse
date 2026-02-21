@@ -248,7 +248,7 @@ export default function AssistantPage() {
     const isEmptyChat = messages.length === 0;
 
     return (
-        <div className="min-h-screen bg-background flex flex-col">
+        <div className="min-h-screen bg-background flex flex-col pb-[60px] lg:pb-0">
             {/* Header */}
             <header className="glass border-b border-border sticky top-0 z-30">
                 <div className="max-w-4xl mx-auto px-4 h-16 flex items-center gap-3">

@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
-const isMobileBuild = process.env.MOBILE_BUILD === 'true';
+// Mobile: MOBILE_BUILD=true (cross-env CLI var)
+// Desktop (Tauri): NEXT_PUBLIC_MOBILE_BUILD=true (from .env.desktop via env:desktop script)
+const isMobileBuild = process.env.MOBILE_BUILD === 'true' || process.env.NEXT_PUBLIC_MOBILE_BUILD === 'true';
 
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
 

@@ -37,6 +37,20 @@ subprojects {
     }
 }
 
+// Capacitor 8.x requires Java 21. Explicitly request the JDK 21 toolchain
+// for all Java compilation tasks across every subproject.
+// Combined with the Foojay resolver in settings.gradle, Gradle will
+// auto-download JDK 21 if it is not already installed.
+subprojects {
+    afterEvaluate {
+        tasks.withType(JavaCompile).configureEach {
+            javaCompiler = javaToolchains.compilerFor {
+                languageVersion = JavaLanguageVersion.of(21)
+            }
+        }
+    }
+}
+
 task clean(type: Delete) {
     delete rootProject.buildDir
 }

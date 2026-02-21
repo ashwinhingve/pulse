@@ -110,7 +110,7 @@ function SidebarNav({ collapsed = false, mobileMode = false, onClose }: SidebarN
     };
 
     const isActive = (href: string) =>
-        href === '/dashboard' ? pathname === '/dashboard' : pathname.startsWith(href);
+        href === '/dashboard' ? pathname === '/dashboard' : (pathname ?? '').startsWith(href);
 
     // Group nav items by section
     const sections: { label: string; items: typeof navItems }[] = [];
@@ -336,7 +336,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 {/* ── Main content ── */}
                 <div className="flex-1 flex flex-col min-w-0 overflow-y-auto scrollbar-thin relative z-10">
                     {children}
-                    <div className="lg:hidden h-[env(safe-area-inset-bottom,0px)]" style={{ height: 'calc(72px + env(safe-area-inset-bottom, 0px))' }} />
+                    <div className="lg:hidden flex-shrink-0" style={{ height: 'calc(76px + env(safe-area-inset-bottom, 0px))' }} />
                 </div>
             </div>
 
@@ -387,7 +387,7 @@ function BottomTabBar() {
         : [];
 
     const isActive = (href: string) =>
-        href === '/dashboard' ? pathname === '/dashboard' : pathname.startsWith(href);
+        href === '/dashboard' ? pathname === '/dashboard' : (pathname ?? '').startsWith(href);
 
     if (!tabs.length) return null;
 

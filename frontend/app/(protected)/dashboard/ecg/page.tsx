@@ -5,7 +5,6 @@ import { motion } from 'framer-motion';
 import {
     Activity, Upload, FileImage, Loader2, Trash2, Shield, CheckCircle2,
 } from 'lucide-react';
-import { api } from '@/lib/api';
 import PageHeader from '@/components/ui/PageHeader';
 import FormTextarea from '@/components/ui/FormTextarea';
 import ErrorBanner from '@/components/ui/ErrorBanner';
@@ -76,10 +75,25 @@ export default function ECGPage() {
         setAnalysis(null);
 
         try {
-            const { data: aiData } = await api.post('/ai/query-protocol', {
-                query: `ECG analysis requested. File: ${selectedFile.name} (${(selectedFile.size / 1024).toFixed(1)}KB, ${selectedFile.type}). Clinical notes: ${notes || 'None provided.'}. Please provide findings, interpretation, urgency level, and recommendations.`,
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+            const token = localStorage.getItem('accessToken');
+
+            const response = await fetch(`${apiUrl}/ai/query-protocol`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+                },
+                body: JSON.stringify({
+                    query: `ECG analysis requested. File: ${selectedFile.name} (${(selectedFile.size / 1024).toFixed(1)}KB, ${selectedFile.type}). Clinical notes: ${notes || 'None provided.'}. Please provide findings, interpretation, urgency level, and recommendations.`,
+                }),
             });
 
+            if (!response.ok) {
+                throw new Error(`Server responded with ${response.status}`);
+            }
+
+            const aiData = await response.json();
             const aiText: string = aiData.protocol || aiData.response || '';
 
             setAnalysis({
@@ -90,7 +104,7 @@ export default function ECGPage() {
                 disclaimer: 'AI-generated preliminary analysis for decision support only. Final interpretation must be made by qualified medical personnel.',
             });
         } catch {
-            setError('Failed to upload and analyze ECG. Please try again.');
+            setError('Failed to analyze ECG. Please ensure the backend is reachable and try again.');
         } finally {
             setIsUploading(false);
         }

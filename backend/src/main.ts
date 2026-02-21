@@ -64,6 +64,12 @@ async function bootstrap() {
         }),
     );
 
+    // Health check endpoint (outside global prefix, for Railway/monitoring)
+    const expressApp = app.getHttpAdapter().getInstance();
+    expressApp.get('/health', (_req: any, res: any) => {
+        res.json({ status: 'ok', service: 'PulseLogic API', timestamp: new Date().toISOString() });
+    });
+
     // API prefix
     app.setGlobalPrefix(apiPrefix);
 

@@ -6,7 +6,7 @@
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:3000",
-    "beforeBuildCommand": "npm run build",
+    "beforeBuildCommand": "npm run build:tauri",
     "frontendDist": "../out"
   },
   "app": {
@@ -32,10 +32,9 @@
         "focus": true,
         "skipTaskbar": false,
         "alwaysOnTop": false,
-        "contentProtected": true
+        "contentProtected": false
       }
-    ],
-    "trayIcon": null
+    ]
   },
   "bundle": {
     "active": true,
@@ -46,7 +45,7 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "targets": "all",
+    "targets": ["nsis", "msi"],
     "category": "Medical",
     "shortDescription": "Secure Military Medical Decision Support System",
     "longDescription": "PulseLogic is a secure, offline-capable medical decision support system designed for military medical personnel. Features include encrypted patient data, AI-assisted clinical guidance, and secure communication.",
@@ -55,9 +54,11 @@
     "windows": {
       "wix": null,
       "nsis": {
-        "installerIcon": "icons/icon.ico",
-        "headerImage": "icons/header.bmp",
-        "sidebarImage": "icons/sidebar.bmp"
+        "installerIcon": "icons/icon.ico"
+      },
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper",
+        "silent": true
       }
     },
     "macOS": {
@@ -93,12 +94,6 @@
         "https://pulse-production-9a76.up.railway.app/*",
         "https://pulse-staging.up.railway.app/*"
       ]
-    },
-    "updater": {
-      "endpoints": [
-        "https://github.com/YOUR_ORG/pulselogic/releases/latest/download/latest.json"
-      ],
-      "pubkey": ""
     }
   }
 }

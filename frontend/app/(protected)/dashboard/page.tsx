@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
     Shield, Thermometer, Activity, MessageSquare, Stethoscope,
-    Lock, Menu, Sun, Moon, AlertTriangle, LogOut, FileText,
+    Lock, Menu, Sun, Moon, LogOut, FileText,
     Settings, User as UserIcon, ChevronRight, Users, Bot,
     Briefcase, BookOpen, ClipboardList, GraduationCap, Loader2,
 } from 'lucide-react';
@@ -188,10 +188,6 @@ export default function DashboardPage() {
                         <NotificationBell />
                         <button onClick={toggleTheme} className="p-2.5 hover:bg-muted/50 rounded-xl touch-target transition-colors" aria-label="Toggle theme">
                             {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-                        </button>
-                        <button className="bg-destructive text-destructive-foreground px-3 py-2 rounded-xl text-sm font-bold flex items-center gap-1.5 shadow-soft touch-target">
-                            <AlertTriangle size={15} />
-                            <span className="hidden sm:inline">SOS</span>
                         </button>
                         <div className="relative">
                             <button onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)} className="h-10 w-10 bg-gradient-to-br from-medical-teal-400 to-medical-blue-500 rounded-xl flex items-center justify-center text-white font-bold touch-target hover:shadow-glow-teal transition-all" aria-label="User menu">
