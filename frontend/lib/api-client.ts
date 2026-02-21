@@ -1,7 +1,12 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from './auth';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+// Server-side: needs absolute URL (Node.js fetch requires it)
+const API_URL = process.env.BACKEND_URL
+    ? `${process.env.BACKEND_URL}/api`
+    : (process.env.NEXT_PUBLIC_API_URL?.startsWith('http')
+        ? process.env.NEXT_PUBLIC_API_URL
+        : 'http://localhost:3001/api');
 
 export async function apiClient(endpoint: string, options: RequestInit = {}) {
     const session = await getServerSession(authOptions);

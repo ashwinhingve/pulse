@@ -1,16 +1,21 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
+const isDev = process.env.CAPACITOR_ENV === 'development';
+
 const config: CapacitorConfig = {
   appId: 'com.military.pulselogic',
   appName: 'PulseLogic',
   webDir: 'out',
 
   server: {
-    // Use HTTP for development (needed for emulator to reach localhost)
-    androidScheme: 'http',
+    // In dev, connect to local dev server for live reload
+    ...(isDev && {
+      url: 'http://10.0.2.2:3000', // Android emulator → host machine
+      cleartext: true,
+    }),
+    // Production uses bundled assets (webDir)
+    androidScheme: isDev ? 'http' : 'https',
     iosScheme: 'https',
-    // Allow cleartext for development
-    cleartext: true,
   },
 
   // iOS specific configurations
@@ -25,9 +30,9 @@ const config: CapacitorConfig = {
   // Android specific configurations
   android: {
     backgroundColor: '#0f172a',
-    allowMixedContent: false,
+    allowMixedContent: isDev, // Only allow mixed content in dev
     captureInput: true,
-    webContentsDebuggingEnabled: process.env.NODE_ENV === 'development',
+    webContentsDebuggingEnabled: isDev,
   },
 
   plugins: {
@@ -57,21 +62,13 @@ const config: CapacitorConfig = {
 
     // Secure storage (for tokens)
     SecureStoragePlugin: {
-      // Enable keychain sharing for iOS
       keychainAccessibility: 'afterFirstUnlock',
     },
 
-    // App configuration
-    App: {
-      // Prevent app content from appearing in screenshots/task switcher
-      // Important for HIPAA compliance
-    },
-
-    // Push notifications (disabled for MVP - out of scope)
-    // PushNotifications: {
-    //   presentationOptions: ['badge', 'sound', 'alert'],
-    // },
+    // App configuration — prevent screenshots for HIPAA
+    App: {},
   },
 };
 
 export default config;
+

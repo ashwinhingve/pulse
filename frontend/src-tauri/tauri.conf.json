@@ -12,7 +12,7 @@
   "app": {
     "withGlobalTauri": true,
     "security": {
-      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' http://localhost:3001 https://localhost:3001;",
+      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' http://localhost:3001 ws://localhost:3001 https://pulse-production-9a76.up.railway.app wss://pulse-production-9a76.up.railway.app https://pulse-staging.up.railway.app wss://pulse-staging.up.railway.app; font-src 'self' https://fonts.gstatic.com;",
       "dangerousDisableAssetCspModification": false,
       "freezePrototype": true
     },
@@ -81,10 +81,24 @@
       "scope": []
     },
     "fs": {
-      "scope": ["$APPDATA/*", "$APPDATA/**/*"]
+      "scope": [
+        "$APPDATA/*",
+        "$APPDATA/**/*"
+      ]
     },
     "http": {
-      "scope": ["http://localhost:*/*", "https://localhost:*/*"]
+      "scope": [
+        "http://localhost:*/*",
+        "https://localhost:*/*",
+        "https://pulse-production-9a76.up.railway.app/*",
+        "https://pulse-staging.up.railway.app/*"
+      ]
+    },
+    "updater": {
+      "endpoints": [
+        "https://github.com/YOUR_ORG/pulselogic/releases/latest/download/latest.json"
+      ],
+      "pubkey": ""
     }
   }
 }

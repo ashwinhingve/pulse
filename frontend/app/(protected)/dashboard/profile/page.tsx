@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
     Shield,
-    ArrowLeft,
     User as UserIcon,
     Mail,
     Lock,
@@ -30,6 +29,8 @@ import {
     CLEARANCE_NAMES,
 } from '@/lib/store/auth';
 import { isMobileBuild, mobileLogout, getStoredSession } from '@/lib/mobile-auth';
+import PageHeader from '@/components/ui/PageHeader';
+import Modal from '@/components/ui/Modal';
 
 export default function ProfilePage() {
     const router = useRouter();
@@ -95,33 +96,17 @@ export default function ProfilePage() {
     };
 
     return (
-        <div className="min-h-screen bg-background safe-all">
-            {/* Header */}
-            <header className="glass border-b border-border sticky top-0 z-30 h-16">
-                <div className="container-app h-full flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <button
-                            onClick={() => router.back()}
-                            className="p-2 hover:bg-muted rounded-xl touch-target transition-colors"
-                        >
-                            <ArrowLeft size={22} className="text-foreground" />
-                        </button>
-                        <div className="flex items-center gap-2.5">
-                            <div className="h-10 w-10 bg-gradient-to-br from-primary to-accent rounded-xl flex items-center justify-center text-white shadow-soft">
-                                <UserIcon size={20} strokeWidth={2.5} />
-                            </div>
-                            <div>
-                                <span className="font-bold text-foreground text-lg">Profile</span>
-                                <p className="text-2xs text-muted-foreground">Account Settings</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </header>
+        <div className="flex flex-col min-h-full safe-top">
+            <PageHeader
+                title="Profile"
+                subtitle="Account Settings"
+                icon={UserIcon}
+            />
 
-            <main className="container-app py-6 space-y-6 animate-fade-in">
+            <main className="flex-1 w-full">
+                <div className="container-app py-6 space-y-6 animate-fade-in">
                 {/* Profile Header Card */}
-                <div className="card p-6 overflow-hidden relative">
+                <div className="glass-card p-6 overflow-hidden relative">
                     {/* Background gradient */}
                     <div className={`absolute top-0 left-0 right-0 h-24 bg-gradient-to-r ${getAvatarGradient()} opacity-10`} />
 
@@ -155,7 +140,7 @@ export default function ProfilePage() {
                 </div>
 
                 {/* Profile Details */}
-                <div className="card">
+                <div className="glass-card">
                     <div className="p-4 border-b border-border">
                         <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
                             <CreditCard size={20} className="text-primary" />
@@ -259,7 +244,7 @@ export default function ProfilePage() {
                 </div>
 
                 {/* Security Section */}
-                <div className="card">
+                <div className="glass-card">
                     <div className="p-4 border-b border-border">
                         <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
                             <Lock size={20} className="text-primary" />
@@ -312,7 +297,7 @@ export default function ProfilePage() {
                 </div>
 
                 {/* Preferences Section */}
-                <div className="card">
+                <div className="glass-card">
                     <div className="p-4 border-b border-border">
                         <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
                             <Settings size={20} className="text-primary" />
@@ -336,7 +321,7 @@ export default function ProfilePage() {
                 </div>
 
                 {/* Session Info */}
-                <div className="card p-4">
+                <div className="glass-card p-4">
                     <div className="flex items-center gap-3 text-sm text-muted-foreground">
                         <Clock size={16} />
                         <span>Session expires in 15 minutes of inactivity</span>
@@ -346,7 +331,7 @@ export default function ProfilePage() {
                 {/* Logout Button */}
                 <button
                     onClick={() => setShowLogoutConfirm(true)}
-                    className="w-full card p-4 flex items-center justify-center gap-3 text-destructive hover:bg-destructive/10 transition-colors"
+                    className="w-full glass-card p-4 flex items-center justify-center gap-3 text-destructive hover:bg-destructive/10 transition-colors"
                 >
                     <LogOut size={20} />
                     <span className="font-medium">Sign Out</span>
@@ -358,39 +343,33 @@ export default function ProfilePage() {
                         PulseLogic v1.0.0 MVP
                     </p>
                 </div>
+                </div>
             </main>
 
             {/* Logout Confirmation Modal */}
-            {showLogoutConfirm && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/50 backdrop-blur-sm animate-fade-in">
-                    <div className="bg-card rounded-2xl shadow-soft-lg max-w-sm w-full p-6 animate-scale-in">
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="w-12 h-12 bg-destructive/10 rounded-xl flex items-center justify-center">
-                                <AlertTriangle size={24} className="text-destructive" />
-                            </div>
-                            <div>
-                                <h3 className="text-lg font-semibold text-foreground">Sign Out?</h3>
-                                <p className="text-sm text-muted-foreground">You will need to sign in again</p>
-                            </div>
-                        </div>
-
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => setShowLogoutConfirm(false)}
-                                className="flex-1 px-4 py-3 bg-muted hover:bg-muted/80 rounded-xl font-medium transition-colors"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleLogout}
-                                className="flex-1 px-4 py-3 bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl font-medium transition-colors"
-                            >
-                                Sign Out
-                            </button>
-                        </div>
+            <Modal open={showLogoutConfirm} onClose={() => setShowLogoutConfirm(false)} title="Sign Out?" subtitle="You will need to sign in again" size="sm">
+                <div className="flex items-center gap-3 mb-4">
+                    <div className="w-12 h-12 bg-destructive/10 rounded-xl flex items-center justify-center">
+                        <AlertTriangle size={24} className="text-destructive" />
                     </div>
+                    <p className="text-sm text-muted-foreground">Are you sure you want to sign out of your account?</p>
                 </div>
-            )}
+
+                <div className="flex gap-3">
+                    <button
+                        onClick={() => setShowLogoutConfirm(false)}
+                        className="flex-1 btn-secondary"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={handleLogout}
+                        className="flex-1 px-4 py-3 bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl font-medium transition-colors"
+                    >
+                        Sign Out
+                    </button>
+                </div>
+            </Modal>
         </div>
     );
 }

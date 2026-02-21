@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useSession } from 'next-auth/react';
 import { io, Socket } from 'socket.io-client';
+import { useAuthStore } from '@/lib/store/auth';
 import {
     Conversation,
     Message,
@@ -20,193 +20,338 @@ interface ChatState {
     messages: Message[];
     partners: ChatPartner[];
     isLoading: boolean;
+    messagesLoading: boolean;
     error: string | null;
     isConnected: boolean;
     typingUsers: Map<string, string>;
     aiTyping: boolean;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api').replace(/\/$/, '');
+// Socket.IO connects to the base URL (no /api prefix), namespace /chat
+const WS_BASE = API_URL.replace('/api', '');
+const WS_URL = `${WS_BASE}/chat`;
+
+// 4-tier token resolution: Zustand → localStorage(accessToken) → mobile localStorage → NextAuth
+const getToken = async (): Promise<string | null> => {
+    // 1. Zustand store (set by ProtectedLayout after NextAuth session is ready)
+    const storeToken = useAuthStore.getState().accessToken;
+    if (storeToken) return storeToken;
+    // 2. Direct localStorage key — setAuth() always writes here
+    try {
+        if (typeof window !== 'undefined') {
+            const direct = localStorage.getItem('accessToken');
+            if (direct) return direct;
+        }
+    } catch {}
+    // 3. Mobile auth storage (Capacitor)
+    try {
+        const { getStoredSession } = await import('@/lib/mobile-auth');
+        const m = getStoredSession();
+        if (m?.tokens?.accessToken) return m.tokens.accessToken;
+    } catch {}
+    // 4. NextAuth session (always fresh from server)
+    try {
+        const { getSession } = await import('next-auth/react');
+        const s = await getSession();
+        return s?.accessToken || null;
+    } catch {}
+    return null;
+};
+
+const getCurrentUserId = (): string | null => {
+    const storeUser = useAuthStore.getState().user;
+    if (storeUser?.id) return storeUser.id;
+    try {
+        const stored = typeof window !== 'undefined' ? localStorage.getItem('pulselogic_auth') : null;
+        if (stored) {
+            const parsed = JSON.parse(stored);
+            return parsed?.user?.id || null;
+        }
+    } catch {}
+    return null;
+};
 
 export function useChat(options: UseChatOptions = {}) {
-    const { data: session } = useSession();
     const socketRef = useRef<Socket | null>(null);
+    const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const isTypingRef = useRef(false);
+
     const [state, setState] = useState<ChatState>({
         conversations: [],
         currentConversation: null,
         messages: [],
         partners: [],
         isLoading: false,
+        messagesLoading: false,
         error: null,
         isConnected: false,
         typingUsers: new Map(),
         aiTyping: false,
     });
 
+    const currentConvRef = useRef<Conversation | null>(null);
+    currentConvRef.current = state.currentConversation;
+
     // Connect to WebSocket
     useEffect(() => {
-        if (!session?.accessToken || !options.autoConnect) return;
+        if (!options.autoConnect) return;
 
-        const socket = io(`${API_URL}/chat`, {
-            auth: {
-                userId: session.user.id,
-                username: session.user.username || session.user.name,
-            },
-            transports: ['websocket'],
-        });
+        let socket: Socket;
+        let mounted = true;
 
-        socket.on('connect', () => {
-            setState((prev) => ({ ...prev, isConnected: true }));
-        });
+        const connect = async () => {
+            const token = await getToken();
+            if (!token || !mounted) return;
 
-        socket.on('disconnect', () => {
-            setState((prev) => ({ ...prev, isConnected: false }));
-        });
-
-        socket.on('new_message', (message: Message) => {
-            setState((prev) => ({
-                ...prev,
-                messages:
-                    prev.currentConversation?.id === message.conversationId
-                        ? [...prev.messages, message]
-                        : prev.messages,
-                conversations: prev.conversations.map((conv) =>
-                    conv.id === message.conversationId
-                        ? {
-                              ...conv,
-                              lastMessageAt: message.createdAt,
-                              metadata: {
-                                  ...conv.metadata,
-                                  lastMessagePreview: message.content.substring(0, 100),
-                              },
-                          }
-                        : conv
-                ),
-            }));
-        });
-
-        socket.on('user_typing', (data: { userId: string; username: string; conversationId: string; isTyping: boolean }) => {
-            setState((prev) => {
-                const newTypingUsers = new Map(prev.typingUsers);
-                if (data.isTyping) {
-                    newTypingUsers.set(data.userId, data.username);
-                } else {
-                    newTypingUsers.delete(data.userId);
-                }
-                return { ...prev, typingUsers: newTypingUsers };
+            socket = io(WS_URL, {
+                auth: { token },
+                transports: ['websocket', 'polling'],
+                reconnection: true,
+                reconnectionDelay: 1000,
+                reconnectionDelayMax: 10000,
+                reconnectionAttempts: 10,
             });
-        });
 
-        socket.on('ai_typing', (data: { conversationId: string; isTyping: boolean }) => {
-            setState((prev) => ({ ...prev, aiTyping: data.isTyping }));
-        });
+            socket.on('connect', () => {
+                if (!mounted) return;
+                setState((prev) => ({ ...prev, isConnected: true }));
+            });
 
-        socket.on('user_online', (data: { userId: string }) => {
-            setState((prev) => ({
-                ...prev,
-                partners: prev.partners.map((p) =>
-                    p.id === data.userId ? { ...p, isOnline: true } : p
-                ),
-            }));
-        });
+            socket.on('disconnect', () => {
+                if (!mounted) return;
+                setState((prev) => ({ ...prev, isConnected: false }));
+            });
 
-        socket.on('user_offline', (data: { userId: string }) => {
-            setState((prev) => ({
-                ...prev,
-                partners: prev.partners.map((p) =>
-                    p.id === data.userId ? { ...p, isOnline: false } : p
-                ),
-            }));
-        });
+            // Refresh JWT before each reconnect attempt so expired tokens don't block reconnection
+            socket.io.on('reconnect_attempt', async () => {
+                const freshToken = await getToken();
+                if (freshToken) {
+                    socket.auth = { token: freshToken };
+                }
+            });
 
-        socketRef.current = socket;
+            socket.on('reconnect', async () => {
+                if (!mounted) return;
+                // Re-fetch conversations and re-join active conversation room
+                await fetchConversationsInternal(socket);
+                const conv = currentConvRef.current;
+                if (conv) {
+                    socket.emit('join_conversation', conv.id);
+                }
+            });
+
+            socket.on('auth_error', (data: { message: string }) => {
+                console.error('Socket auth error:', data.message);
+                if (!mounted) return;
+                setState((prev) => ({ ...prev, error: data.message, isConnected: false }));
+            });
+
+            socket.on('new_message', (message: Message) => {
+                if (!mounted) return;
+                setState((prev) => ({
+                    ...prev,
+                    messages:
+                        prev.currentConversation?.id === message.conversationId
+                            ? [...prev.messages.filter((m) => !m.id.startsWith('temp-')), message]
+                            : prev.messages,
+                    conversations: prev.conversations.map((conv) =>
+                        conv.id === message.conversationId
+                            ? {
+                                  ...conv,
+                                  lastMessageAt: message.createdAt,
+                                  metadata: {
+                                      ...conv.metadata,
+                                      lastMessagePreview: message.content.substring(0, 100),
+                                  },
+                              }
+                            : conv
+                    ),
+                }));
+            });
+
+            socket.on(
+                'user_typing',
+                (data: { userId: string; username: string; conversationId: string; isTyping: boolean }) => {
+                    if (!mounted) return;
+                    setState((prev) => {
+                        const newTypingUsers = new Map(prev.typingUsers);
+                        if (data.isTyping) {
+                            newTypingUsers.set(data.userId, data.username);
+                        } else {
+                            newTypingUsers.delete(data.userId);
+                        }
+                        return { ...prev, typingUsers: newTypingUsers };
+                    });
+                }
+            );
+
+            socket.on('ai_typing', (data: { conversationId: string; isTyping: boolean }) => {
+                if (!mounted) return;
+                setState((prev) => ({ ...prev, aiTyping: data.isTyping }));
+            });
+
+            socket.on('user_online', (data: { userId: string }) => {
+                if (!mounted) return;
+                setState((prev) => ({
+                    ...prev,
+                    partners: prev.partners.map((p) =>
+                        p.id === data.userId ? { ...p, isOnline: true } : p
+                    ),
+                }));
+            });
+
+            socket.on('user_offline', (data: { userId: string }) => {
+                if (!mounted) return;
+                setState((prev) => ({
+                    ...prev,
+                    partners: prev.partners.map((p) =>
+                        p.id === data.userId ? { ...p, isOnline: false } : p
+                    ),
+                }));
+            });
+
+            socket.on('unread_update', (data: { conversationId: string; unreadCount: number }) => {
+                if (!mounted) return;
+                setState((prev) => ({
+                    ...prev,
+                    conversations: prev.conversations.map((conv) =>
+                        conv.id === data.conversationId
+                            ? { ...conv, unreadCount: data.unreadCount }
+                            : conv
+                    ),
+                }));
+            });
+
+            socket.on('unread_cleared', (data: { conversationId: string }) => {
+                if (!mounted) return;
+                setState((prev) => ({
+                    ...prev,
+                    conversations: prev.conversations.map((conv) =>
+                        conv.id === data.conversationId ? { ...conv, unreadCount: 0 } : conv
+                    ),
+                }));
+            });
+
+            socket.on('message_status', (data: { conversationId: string; status: string }) => {
+                if (!mounted) return;
+                setState((prev) => ({
+                    ...prev,
+                    messages: prev.messages.map((m) =>
+                        m.conversationId === data.conversationId ? { ...m, status: data.status as any } : m
+                    ),
+                }));
+            });
+
+            socketRef.current = socket;
+        };
+
+        connect();
 
         return () => {
-            socket.disconnect();
+            mounted = false;
+            if (socket) {
+                socket.disconnect();
+            }
             socketRef.current = null;
         };
-    }, [session?.accessToken, session?.user.id, session?.user.username, session?.user.name, options.autoConnect]);
+    }, [options.autoConnect]);
+
+    // Internal fetch that can be called with an existing socket
+    const fetchConversationsInternal = useCallback(async (socket?: Socket) => {
+        const token = await getToken();
+        if (!token) return;
+
+        try {
+            const response = await fetch(`${API_URL}/chat/conversations`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+
+            if (!response.ok) return;
+
+            const conversations = await response.json();
+            setState((prev) => ({ ...prev, conversations }));
+
+            // Re-join conversation rooms on reconnect
+            if (socket) {
+                conversations.forEach((conv: Conversation) => {
+                    socket.emit('join_conversation', conv.id);
+                });
+            }
+        } catch {}
+    }, []);
 
     // Fetch conversations
     const fetchConversations = useCallback(async () => {
-        if (!session?.accessToken) return;
-
         setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
         try {
-            const response = await fetch(`${API_URL}/api/chat/conversations`, {
-                headers: {
-                    Authorization: `Bearer ${session.accessToken}`,
-                },
-            });
-
-            if (!response.ok) throw new Error('Failed to fetch conversations');
-
-            const conversations = await response.json();
-            setState((prev) => ({ ...prev, conversations, isLoading: false }));
+            await fetchConversationsInternal();
         } catch (error) {
             setState((prev) => ({
                 ...prev,
                 error: 'Failed to fetch conversations',
-                isLoading: false,
             }));
+        } finally {
+            setState((prev) => ({ ...prev, isLoading: false }));
         }
-    }, [session?.accessToken]);
+    }, [fetchConversationsInternal]);
 
     // Fetch messages for a conversation
-    const fetchMessages = useCallback(
-        async (conversationId: string) => {
-            if (!session?.accessToken) return;
+    const fetchMessages = useCallback(async (conversationId: string) => {
+        const token = await getToken();
+        if (!token) return;
 
-            setState((prev) => ({ ...prev, isLoading: true, error: null }));
-
-            try {
-                const response = await fetch(
-                    `${API_URL}/api/chat/conversations/${conversationId}/messages`,
-                    {
-                        headers: {
-                            Authorization: `Bearer ${session.accessToken}`,
-                        },
-                    }
-                );
-
-                if (!response.ok) throw new Error('Failed to fetch messages');
-
-                const messages = await response.json();
-                setState((prev) => ({ ...prev, messages, isLoading: false }));
-
-                // Join conversation room via socket
-                socketRef.current?.emit('join_conversation', conversationId);
-            } catch (error) {
-                setState((prev) => ({
-                    ...prev,
-                    error: 'Failed to fetch messages',
-                    isLoading: false,
-                }));
-            }
-        },
-        [session?.accessToken]
-    );
-
-    // Fetch available chat partners
-    const fetchPartners = useCallback(async () => {
-        if (!session?.accessToken) return;
+        setState((prev) => ({ ...prev, messagesLoading: true, error: null }));
 
         try {
-            const response = await fetch(`${API_URL}/api/chat/partners`, {
-                headers: {
-                    Authorization: `Bearer ${session.accessToken}`,
-                },
+            const response = await fetch(
+                `${API_URL}/chat/conversations/${conversationId}/messages`,
+                {
+                    headers: { Authorization: `Bearer ${token}` },
+                }
+            );
+
+            if (!response.ok) throw new Error('Failed to fetch messages');
+
+            const messages = await response.json();
+            setState((prev) => ({ ...prev, messages, messagesLoading: false }));
+
+            // Join conversation room via socket and mark delivered
+            socketRef.current?.emit('join_conversation', conversationId);
+            socketRef.current?.emit('mark_delivered', { conversationId });
+        } catch (error) {
+            setState((prev) => ({
+                ...prev,
+                error: 'Failed to fetch messages',
+                messagesLoading: false,
+            }));
+        }
+    }, []);
+
+    // Fetch available chat partners — returns true on success, false on failure
+    const fetchPartners = useCallback(async (): Promise<boolean> => {
+        const token = await getToken();
+        if (!token) return false;
+
+        try {
+            const response = await fetch(`${API_URL}/chat/partners`, {
+                headers: { Authorization: `Bearer ${token}` },
             });
 
-            if (!response.ok) throw new Error('Failed to fetch partners');
+            if (!response.ok) {
+                console.error('fetchPartners failed:', response.status);
+                return false;
+            }
 
             const partners = await response.json();
             setState((prev) => ({ ...prev, partners }));
+            return true;
         } catch (error) {
             console.error('Failed to fetch partners:', error);
+            return false;
         }
-    }, [session?.accessToken]);
+    }, []);
 
     // Create a new conversation
     const createConversation = useCallback(
@@ -216,16 +361,17 @@ export function useChat(options: UseChatOptions = {}) {
             title?: string;
             context?: string;
         }) => {
-            if (!session?.accessToken) return null;
+            const token = await getToken();
+            if (!token) return null;
 
             setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
             try {
-                const response = await fetch(`${API_URL}/api/chat/conversations`, {
+                const response = await fetch(`${API_URL}/chat/conversations`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        Authorization: `Bearer ${session.accessToken}`,
+                        Authorization: `Bearer ${token}`,
                     },
                     body: JSON.stringify(data),
                 });
@@ -240,6 +386,9 @@ export function useChat(options: UseChatOptions = {}) {
                     isLoading: false,
                 }));
 
+                // Join new conversation room
+                socketRef.current?.emit('join_conversation', conversation.id);
+
                 return conversation;
             } catch (error) {
                 setState((prev) => ({
@@ -250,57 +399,117 @@ export function useChat(options: UseChatOptions = {}) {
                 return null;
             }
         },
-        [session?.accessToken]
+        []
     );
 
-    // Send a message (user-to-user)
+    // Send a message (user-to-user) via socket with optimistic update
     const sendMessage = useCallback(
-        async (content: string) => {
-            if (!state.currentConversation || !socketRef.current) return;
+        async (content: string, attachmentUrl?: string) => {
+            const conv = currentConvRef.current;
+            if (!conv || !socketRef.current) return;
 
-            socketRef.current.emit('send_message', {
-                conversationId: state.currentConversation.id,
-                content,
-            });
+            const userId = getCurrentUserId();
+            const tempId = `temp-${Date.now()}`;
+
+            // Optimistic message
+            if (userId) {
+                const optimistic: Partial<Message> = {
+                    id: tempId,
+                    conversationId: conv.id,
+                    senderId: userId,
+                    content,
+                    status: 'sent' as any,
+                    createdAt: new Date().toISOString() as any,
+                };
+                setState((prev) => ({
+                    ...prev,
+                    messages: [...prev.messages, optimistic as Message],
+                }));
+            }
+
+            socketRef.current.emit(
+                'send_message',
+                {
+                    conversationId: conv.id,
+                    content,
+                    attachmentUrl,
+                },
+                (ack: { success?: boolean; error?: string; message?: Message }) => {
+                    if (ack?.error) {
+                        // Remove optimistic message on failure
+                        setState((prev) => ({
+                            ...prev,
+                            messages: prev.messages.filter((m) => m.id !== tempId),
+                        }));
+                    }
+                    // On success, the new_message event will replace the optimistic msg
+                }
+            );
         },
-        [state.currentConversation]
+        []
     );
 
     // Send a message to AI
-    const sendAIMessage = useCallback(
-        async (content: string) => {
-            if (!state.currentConversation || !socketRef.current) return;
+    const sendAIMessage = useCallback(async (content: string) => {
+        const conv = currentConvRef.current;
+        if (!conv || !socketRef.current) return;
 
-            socketRef.current.emit('send_ai_message', {
-                conversationId: state.currentConversation.id,
-                content,
-            });
-        },
-        [state.currentConversation]
-    );
+        socketRef.current.emit('send_ai_message', {
+            conversationId: conv.id,
+            content,
+        });
+    }, []);
 
-    // Send typing indicator
-    const sendTyping = useCallback(
-        (isTyping: boolean) => {
-            if (!state.currentConversation || !socketRef.current) return;
+    // Send typing indicator (throttled)
+    const sendTyping = useCallback((isTyping: boolean) => {
+        const conv = currentConvRef.current;
+        if (!conv || !socketRef.current) return;
 
-            socketRef.current.emit('typing', {
-                conversationId: state.currentConversation.id,
-                isTyping,
-            });
-        },
-        [state.currentConversation]
-    );
+        if (isTyping) {
+            if (!isTypingRef.current) {
+                isTypingRef.current = true;
+                socketRef.current.emit('typing', {
+                    conversationId: conv.id,
+                    isTyping: true,
+                });
+            }
+
+            // Reset silence timer
+            if (typingTimerRef.current) {
+                clearTimeout(typingTimerRef.current);
+            }
+            typingTimerRef.current = setTimeout(() => {
+                isTypingRef.current = false;
+                socketRef.current?.emit('typing', {
+                    conversationId: conv.id,
+                    isTyping: false,
+                });
+            }, 2500);
+        } else {
+            if (typingTimerRef.current) {
+                clearTimeout(typingTimerRef.current);
+                typingTimerRef.current = null;
+            }
+            if (isTypingRef.current) {
+                isTypingRef.current = false;
+                socketRef.current.emit('typing', {
+                    conversationId: conv.id,
+                    isTyping: false,
+                });
+            }
+        }
+    }, []);
 
     // Select a conversation
     const selectConversation = useCallback(
         (conversation: Conversation | null) => {
-            if (state.currentConversation) {
-                socketRef.current?.emit('leave_conversation', state.currentConversation.id);
+            const prev = currentConvRef.current;
+            if (prev) {
+                socketRef.current?.emit('leave_conversation', prev.id);
             }
 
-            setState((prev) => ({
-                ...prev,
+            setState((s) => ({
+                ...s,
                 currentConversation: conversation,
                 messages: [],
                 typingUsers: new Map(),
@@ -311,13 +520,40 @@ export function useChat(options: UseChatOptions = {}) {
                 fetchMessages(conversation.id);
             }
         },
-        [state.currentConversation, fetchMessages]
+        [fetchMessages]
     );
 
     // Mark conversation as read
-    const markAsRead = useCallback(
-        async (conversationId: string) => {
-            socketRef.current?.emit('mark_read', conversationId);
+    const markAsRead = useCallback((conversationId: string) => {
+        socketRef.current?.emit('mark_read', conversationId);
+    }, []);
+
+    // Upload a file attachment
+    const uploadAttachment = useCallback(
+        async (file: File, conversationId: string): Promise<string | null> => {
+            const token = await getToken();
+            if (!token) return null;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch(
+                    `${API_URL}/chat/attachments?conversationId=${conversationId}`,
+                    {
+                        method: 'POST',
+                        headers: { Authorization: `Bearer ${token}` },
+                        body: formData,
+                    }
+                );
+
+                if (!response.ok) return null;
+
+                const data = await response.json();
+                return data.url || null;
+            } catch {
+                return null;
+            }
         },
         []
     );
@@ -333,5 +569,6 @@ export function useChat(options: UseChatOptions = {}) {
         sendTyping,
         selectConversation,
         markAsRead,
+        uploadAttachment,
     };
 }

@@ -4,10 +4,14 @@ import { getToken } from 'next-auth/jwt';
 
 // Role-based route access control
 const roleRoutePermissions: Record<string, string[]> = {
-    ADMIN: ['/admin', '/doctor', '/specialist', '/medic', '/dashboard'],
-    DOCTOR: ['/doctor', '/dashboard'],
-    SPECIALIST: ['/specialist', '/dashboard'],
-    MEDIC: ['/medic', '/dashboard'],
+    admin: ['/admin', '/dashboard'],
+    army_medical_officer: ['/dashboard'],
+    public_medical_official: ['/dashboard'],
+    // Uppercase fallbacks
+    ADMIN: ['/admin', '/dashboard'],
+    DOCTOR: ['/dashboard'],
+    SPECIALIST: ['/dashboard'],
+    MEDIC: ['/dashboard'],
 };
 
 // Public routes that don't require authentication
@@ -40,7 +44,7 @@ export async function middleware(request: NextRequest) {
     }
 
     // Check role-based access for protected routes
-    const userRole = (token.role as string)?.toUpperCase() || 'MEDIC';
+    const userRole = (token.role as string) || 'army_medical_officer';
     const allowedRoutes = roleRoutePermissions[userRole] || ['/dashboard'];
 
     // Check if user can access this route
@@ -55,9 +59,10 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
 }
 
-// Configure which routes to run middleware on
+// Middleware is NOT used in mobile/desktop static export builds
+// Mobile auth uses direct API calls via lib/mobile-auth.ts
 export const config = {
-    matcher: [
-        '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
-    ],
+    matcher: process.env.MOBILE_BUILD === 'true'
+        ? []  // Empty = middleware disabled for static export
+        : ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
 };

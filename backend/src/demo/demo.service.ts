@@ -1,13 +1,14 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from '../users/user.entity';
+import { UserStatus } from '../common/enums/roles.enum';
 import { MedicalCase, CaseSeverity, CaseStatus } from '../medical/entities/medical-case.entity';
 import { UserRole, ClearanceLevel } from '../common/enums/roles.enum';
 
 @Injectable()
-export class DemoService {
+export class DemoService implements OnApplicationBootstrap {
     private readonly logger = new Logger(DemoService.name);
 
     constructor(
@@ -15,7 +16,36 @@ export class DemoService {
         private userRepository: Repository<User>,
         @InjectRepository(MedicalCase)
         private caseRepository: Repository<MedicalCase>,
+        private dataSource: DataSource,
     ) { }
+
+    // Auto-seed on startup when the database is empty (first deployment)
+    async onApplicationBootstrap(): Promise<void> {
+        try {
+            const userCount = await this.userRepository.count();
+            if (userCount === 0) {
+                this.logger.log('📦 Empty database detected — auto-seeding initial data...');
+                await this.seedDemoData();
+            } else {
+                // Schema migration guard: when the 'status' column was added with default 'pending',
+                // all pre-existing rows (demo/admin users) got status='pending'.
+                // Fix them: any pending user without a requestedRole in metadata is a
+                // seeded/admin-created user that should be active.
+                const fixed = await this.userRepository
+                    .createQueryBuilder()
+                    .update(User)
+                    .set({ status: UserStatus.ACTIVE, isActive: true })
+                    .where('status = :status', { status: UserStatus.PENDING })
+                    .andWhere("(metadata->>'requestedRole' IS NULL)")
+                    .execute();
+                if (fixed.affected && fixed.affected > 0) {
+                    this.logger.log(`🔧 Fixed ${fixed.affected} user(s) incorrectly set to pending by schema migration`);
+                }
+            }
+        } catch (err) {
+            this.logger.warn(`Auto-seed/fix skipped: ${err.message}`);
+        }
+    }
 
     async seedDemoData(): Promise<void> {
         this.logger.log('🌱 Seeding demo data...');
@@ -120,6 +150,8 @@ export class DemoService {
                 role: userData.role,
                 clearanceLevel: userData.clearanceLevel,
                 department: userData.department,
+                status: UserStatus.ACTIVE,
+                isActive: true,
                 metadata: {
                     rank: userData.rank,
                     serviceNumber: userData.serviceNumber,
@@ -205,14 +237,14 @@ export class DemoService {
     async resetDemoData(): Promise<void> {
         this.logger.log('🔄 Resetting demo data...');
 
-        // Delete all cases
-        await this.caseRepository.delete({});
+        // TRUNCATE with CASCADE drops all rows from user and every table that
+        // has a FK pointing at it (message, conversation, medical_case,
+        // medical_file, audit_log, etc.) in one atomic operation.
+        await this.dataSource.query('TRUNCATE TABLE "users" RESTART IDENTITY CASCADE');
 
-        // Delete all users
-        await this.userRepository.delete({});
-
-        // Re-seed
-        await this.seedDemoData();
+        // Re-seed directly (bypass the "already exists" guard in seedDemoData)
+        await this.createDemoUsers();
+        await this.createDemoCases();
 
         this.logger.log('✅ Demo data reset complete');
     }

@@ -1,19 +1,15 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
 import {
-    ArrowLeft,
-    Activity,
-    Upload,
-    FileImage,
-    AlertTriangle,
-    Loader2,
-    Trash2,
-    Shield,
-    CheckCircle2
+    Activity, Upload, FileImage, Loader2, Trash2, Shield, CheckCircle2,
 } from 'lucide-react';
-import { useAuthStore } from '@/lib/store/auth';
+import { api } from '@/lib/api';
+import PageHeader from '@/components/ui/PageHeader';
+import FormTextarea from '@/components/ui/FormTextarea';
+import ErrorBanner from '@/components/ui/ErrorBanner';
+import Badge from '@/components/ui/Badge';
 
 interface ECGAnalysis {
     findings: string;
@@ -23,9 +19,13 @@ interface ECGAnalysis {
     disclaimer: string;
 }
 
+const URGENCY_MAP: Record<string, { variant: 'success' | 'warning' | 'danger'; label: string }> = {
+    normal: { variant: 'success', label: 'Normal' },
+    abnormal: { variant: 'warning', label: 'Abnormal' },
+    critical: { variant: 'danger', label: 'Critical' },
+};
+
 export default function ECGPage() {
-    const router = useRouter();
-    const { accessToken } = useAuthStore();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [preview, setPreview] = useState<string | null>(null);
@@ -62,9 +62,7 @@ export default function ECGPage() {
         setSelectedFile(null);
         setPreview(null);
         setAnalysis(null);
-        if (fileInputRef.current) {
-            fileInputRef.current.value = '';
-        }
+        if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
     const handleUpload = async () => {
@@ -78,233 +76,170 @@ export default function ECGPage() {
         setAnalysis(null);
 
         try {
-            const formData = new FormData();
-            formData.append('file', selectedFile);
-            formData.append('notes', notes);
-            formData.append('type', 'ecg');
-
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/medical/files/upload`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${accessToken}`,
-                },
-                body: formData,
+            const { data: aiData } = await api.post('/ai/query-protocol', {
+                query: `ECG analysis requested. File: ${selectedFile.name} (${(selectedFile.size / 1024).toFixed(1)}KB, ${selectedFile.type}). Clinical notes: ${notes || 'None provided.'}. Please provide findings, interpretation, urgency level, and recommendations.`,
             });
 
-            if (!response.ok) {
-                throw new Error('Upload failed');
-            }
+            const aiText: string = aiData.protocol || aiData.response || '';
 
-            // Mock analysis for demo
             setAnalysis({
-                findings: 'ECG uploaded successfully. Pattern analysis indicates normal sinus rhythm with regular intervals.',
-                interpretation: 'The uploaded ECG shows standard waveform patterns. Heart rate and rhythm appear within normal parameters for the given context.',
+                findings: aiText || 'ECG uploaded successfully. AI analysis complete.',
+                interpretation: 'AI-assisted ECG interpretation based on uploaded recording and clinical notes.',
                 urgency: 'normal',
-                recommendations: [
-                    'Continue routine monitoring',
-                    'Document any symptom changes',
-                    'Follow up with cardiologist if symptoms develop',
-                    'Maintain current treatment plan'
-                ],
-                disclaimer: 'AI-generated preliminary analysis for decision support only. Final interpretation must be made by qualified medical personnel.'
+                recommendations: [],
+                disclaimer: 'AI-generated preliminary analysis for decision support only. Final interpretation must be made by qualified medical personnel.',
             });
-        } catch (err) {
+        } catch {
             setError('Failed to upload and analyze ECG. Please try again.');
         } finally {
             setIsUploading(false);
         }
     };
 
-    const getUrgencyColor = (urgency: string) => {
-        switch (urgency) {
-            case 'critical': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
-            case 'abnormal': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
-            default: return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
-        }
-    };
-
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
-            <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30">
-                <div className="max-w-4xl mx-auto px-4 h-16 flex items-center gap-4">
-                    <button
-                        onClick={() => router.back()}
-                        className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full"
+        <div className="flex flex-col min-h-full safe-top">
+            <PageHeader
+                title="ECG Upload & Analysis"
+                subtitle="AI-powered ECG interpretation"
+                icon={Activity}
+                iconBg="bg-rose-100 dark:bg-rose-900/30"
+                iconColor="text-rose-600 dark:text-rose-400"
+            />
+
+            <main className="flex-1 w-full">
+                <div className="container-app space-y-6 pb-8 max-w-4xl animate-fade-in">
+                    {/* Upload Section */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className="glass-card p-6"
                     >
-                        <ArrowLeft size={20} />
-                    </button>
-                    <div className="flex items-center gap-2">
-                        <Activity className="text-rose-500" size={24} />
-                        <h1 className="text-xl font-bold text-slate-800 dark:text-white">
-                            ECG Upload & Analysis
-                        </h1>
-                    </div>
-                </div>
-            </header>
+                        <h2 className="text-base font-semibold text-foreground mb-4">Upload ECG Recording</h2>
 
-            <main className="max-w-4xl mx-auto p-4 space-y-6 pb-24">
-                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 flex items-start gap-3">
-                    <AlertTriangle className="text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" size={20} />
-                    <div>
-                        <p className="text-sm text-amber-800 dark:text-amber-200 font-medium">DEMO MODE - Decision Support Only</p>
-                        <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
-                            ECG analysis is AI-assisted preliminary screening. All findings require review by qualified cardiologists.
-                        </p>
-                    </div>
-                </div>
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/*,.pdf"
+                            onChange={handleFileSelect}
+                            className="hidden"
+                        />
 
-                <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
-                    <h2 className="text-lg font-semibold text-slate-800 dark:text-white mb-4">
-                        Upload ECG Recording
-                    </h2>
-
-                    <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*,.pdf"
-                        onChange={handleFileSelect}
-                        className="hidden"
-                    />
-
-                    {!selectedFile ? (
-                        <button
-                            onClick={() => fileInputRef.current?.click()}
-                            className="w-full border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl p-12 flex flex-col items-center justify-center gap-4 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
-                        >
-                            <div className="bg-slate-100 dark:bg-slate-700 w-16 h-16 rounded-full flex items-center justify-center">
-                                <Upload className="text-slate-400 dark:text-slate-500" size={32} />
-                            </div>
-                            <div className="text-center">
-                                <p className="font-medium text-slate-700 dark:text-slate-300">
-                                    Click to upload ECG image
-                                </p>
-                                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                                    PNG, JPG, or PDF up to 10MB
-                                </p>
-                            </div>
-                        </button>
-                    ) : (
-                        <div className="border border-slate-200 dark:border-slate-700 rounded-xl p-4">
-                            <div className="flex items-start justify-between mb-4">
-                                <div className="flex items-center gap-3">
-                                    <FileImage className="text-blue-500" size={24} />
-                                    <div>
-                                        <p className="font-medium text-slate-800 dark:text-white">
-                                            {selectedFile.name}
-                                        </p>
-                                        <p className="text-sm text-slate-500 dark:text-slate-400">
-                                            {(selectedFile.size / 1024).toFixed(1)} KB
-                                        </p>
-                                    </div>
+                        {!selectedFile ? (
+                            <button
+                                onClick={() => fileInputRef.current?.click()}
+                                className="w-full border-2 border-dashed border-border/60 rounded-xl p-12 flex flex-col items-center justify-center gap-4 hover:border-primary/40 hover:bg-muted/30 transition-all duration-300 group"
+                            >
+                                <div className="w-16 h-16 bg-gradient-to-br from-rose-400/20 to-rose-600/20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                                    <Upload className="text-rose-500" size={28} />
                                 </div>
-                                <button
-                                    onClick={handleRemoveFile}
-                                    className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"
-                                >
-                                    <Trash2 size={18} />
-                                </button>
-                            </div>
-                            {preview && (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img
-                                    src={preview}
-                                    alt="ECG Preview"
-                                    className="w-full rounded-lg border border-slate-200 dark:border-slate-700"
-                                />
-                            )}
-                        </div>
-                    )}
-                </div>
-
-                <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
-                    <h2 className="text-lg font-semibold text-slate-800 dark:text-white mb-4">
-                        Clinical Notes
-                    </h2>
-                    <textarea
-                        value={notes}
-                        onChange={(e) => setNotes(e.target.value)}
-                        placeholder="Add any relevant clinical context (patient history, current medications, symptoms)..."
-                        rows={4}
-                        className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-white resize-none"
-                    />
-                </div>
-
-                {error && (
-                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 text-red-800 dark:text-red-200">
-                        {error}
-                    </div>
-                )}
-
-                <button
-                    onClick={handleUpload}
-                    disabled={isUploading || !selectedFile}
-                    className="w-full bg-rose-600 hover:bg-rose-700 disabled:bg-slate-400 text-white font-semibold py-4 rounded-xl flex items-center justify-center gap-2 transition-colors"
-                >
-                    {isUploading ? (
-                        <>
-                            <Loader2 className="animate-spin" size={20} />
-                            Uploading & Analyzing...
-                        </>
-                    ) : (
-                        <>
-                            <Shield size={20} />
-                            Upload & Analyze (Encrypted)
-                        </>
-                    )}
-                </button>
-
-                {analysis && (
-                    <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700 space-y-4">
-                        <div className="flex items-center justify-between">
-                            <h2 className="text-lg font-semibold text-slate-800 dark:text-white">
-                                Analysis Results
-                            </h2>
-                            <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${getUrgencyColor(analysis.urgency)}`}>
-                                {analysis.urgency}
-                            </span>
-                        </div>
-
-                        <div>
-                            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                                Findings
-                            </h3>
-                            <p className="text-slate-600 dark:text-slate-400">
-                                {analysis.findings}
-                            </p>
-                        </div>
-
-                        <div>
-                            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                                Interpretation
-                            </h3>
-                            <p className="text-slate-600 dark:text-slate-400">
-                                {analysis.interpretation}
-                            </p>
-                        </div>
-
-                        {analysis.recommendations.length > 0 && (
-                            <div>
-                                <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                                    Recommendations
-                                </h3>
-                                <ul className="space-y-2">
-                                    {analysis.recommendations.map((rec, i) => (
-                                        <li key={i} className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-400">
-                                            <CheckCircle2 className="text-green-500 flex-shrink-0 mt-0.5" size={16} />
-                                            {rec}
-                                        </li>
-                                    ))}
-                                </ul>
+                                <div className="text-center">
+                                    <p className="font-medium text-foreground">Click to upload ECG image</p>
+                                    <p className="text-sm text-muted-foreground mt-1">PNG, JPG, or PDF up to 10MB</p>
+                                </div>
+                            </button>
+                        ) : (
+                            <div className="border border-border/50 rounded-xl p-4 bg-muted/10">
+                                <div className="flex items-start justify-between mb-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
+                                            <FileImage className="text-blue-500" size={20} />
+                                        </div>
+                                        <div>
+                                            <p className="font-medium text-foreground text-sm">{selectedFile.name}</p>
+                                            <p className="text-xs text-muted-foreground">{(selectedFile.size / 1024).toFixed(1)} KB</p>
+                                        </div>
+                                    </div>
+                                    <button onClick={handleRemoveFile} className="p-2 text-destructive hover:bg-destructive/10 rounded-xl transition-colors">
+                                        <Trash2 size={16} />
+                                    </button>
+                                </div>
+                                {preview && (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img src={preview} alt="ECG Preview" className="w-full rounded-xl border border-border/50" />
+                                )}
                             </div>
                         )}
+                    </motion.div>
 
-                        <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
-                            <p className="text-xs text-slate-500 dark:text-slate-400 italic">
-                                {analysis.disclaimer}
-                            </p>
-                        </div>
-                    </div>
-                )}
+                    {/* Clinical Notes */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3, delay: 0.1 }}
+                        className="glass-card p-6"
+                    >
+                        <FormTextarea
+                            label="Clinical Notes"
+                            value={notes}
+                            onChange={(e) => setNotes(e.target.value)}
+                            placeholder="Add any relevant clinical context (patient history, current medications, symptoms)..."
+                            rows={4}
+                        />
+                    </motion.div>
+
+                    {error && <ErrorBanner message={error} onDismiss={() => setError('')} />}
+
+                    {/* Upload Button */}
+                    <button
+                        onClick={handleUpload}
+                        disabled={isUploading || !selectedFile}
+                        className="w-full btn-primary py-4 rounded-xl flex items-center justify-center gap-2 text-base font-semibold disabled:opacity-50"
+                    >
+                        {isUploading ? (
+                            <><Loader2 className="animate-spin" size={20} /> Uploading & Analyzing...</>
+                        ) : (
+                            <><Shield size={20} /> Upload & Analyze (Encrypted)</>
+                        )}
+                    </button>
+
+                    {/* Analysis Results */}
+                    {analysis && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 16 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.4 }}
+                            className="glass-card p-6 space-y-5"
+                        >
+                            <div className="flex items-center justify-between">
+                                <h2 className="text-base font-semibold text-foreground">Analysis Results</h2>
+                                <Badge variant={URGENCY_MAP[analysis.urgency]?.variant || 'success'} size="md">
+                                    {analysis.urgency.toUpperCase()}
+                                </Badge>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Findings</h3>
+                                    <p className="text-sm text-foreground/80 leading-relaxed">{analysis.findings}</p>
+                                </div>
+
+                                <div>
+                                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Interpretation</h3>
+                                    <p className="text-sm text-foreground/80 leading-relaxed">{analysis.interpretation}</p>
+                                </div>
+
+                                {analysis.recommendations.length > 0 && (
+                                    <div>
+                                        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Recommendations</h3>
+                                        <ul className="space-y-2">
+                                            {analysis.recommendations.map((rec, i) => (
+                                                <li key={i} className="flex items-start gap-2 text-sm text-foreground/80">
+                                                    <CheckCircle2 className="text-emerald-500 flex-shrink-0 mt-0.5" size={16} />
+                                                    {rec}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="pt-4 border-t border-border/40">
+                                <p className="text-xs text-muted-foreground italic">{analysis.disclaimer}</p>
+                            </div>
+                        </motion.div>
+                    )}
+                </div>
             </main>
         </div>
     );

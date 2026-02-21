@@ -7,7 +7,9 @@ import {
     Index,
 } from 'typeorm';
 import { Exclude } from 'class-transformer';
-import { UserRole, ClearanceLevel } from '../common/enums/roles.enum';
+import { UserRole, ClearanceLevel, UserStatus } from '../common/enums/roles.enum';
+
+export { UserStatus };
 
 @Entity('users')
 export class User {
@@ -49,6 +51,7 @@ export class User {
         licenseNumber?: string;
         specialization?: string;
         unit?: string;
+        requestedRole?: string;
     };
 
     @Column({ nullable: true })
@@ -60,6 +63,13 @@ export class User {
 
     @Column({ default: true })
     isActive: boolean;
+
+    @Column({
+        type: 'enum',
+        enum: UserStatus,
+        default: UserStatus.ACTIVE,
+    })
+    status: UserStatus;
 
     @Column({ nullable: true })
     lastLoginAt: Date;

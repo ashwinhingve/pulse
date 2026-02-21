@@ -1,19 +1,25 @@
 'use client';
 
 import { useState, Suspense, useEffect } from 'react';
+import Link from 'next/link';
 import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Shield, Lock, User as UserIcon, Key, AlertTriangle, Loader2, Eye, EyeOff } from 'lucide-react';
+import {
+    Lock, User as UserIcon, Key, AlertTriangle,
+    Loader2, CheckCircle2, ArrowRight, HeartPulse,
+} from 'lucide-react';
 import { mobileLogin, isMobileBuild } from '@/lib/mobile-auth';
+import AuthLayout from '@/components/auth/AuthLayout';
+import AuthInput from '@/components/auth/AuthInput';
 
 function LoginForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
+    const justRegistered = searchParams.get('registered') === '1';
 
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
-    const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
@@ -29,11 +35,9 @@ function LoginForm() {
 
         try {
             if (isMobile) {
-                // Mobile: Use direct API authentication
                 await mobileLogin(username, password);
                 router.push('/dashboard');
             } else {
-                // Web: Use NextAuth
                 const result = await signIn('credentials', {
                     username,
                     password,
@@ -41,121 +45,99 @@ function LoginForm() {
                 });
 
                 if (result?.error) {
-                    setError(result.error === 'CredentialsSignin'
-                        ? 'Invalid username or password'
-                        : result.error
-                    );
+                    if (result.error === 'ACCOUNT_PENDING') {
+                        setError('Your account is pending administrator approval. You will be notified once it is activated.');
+                    } else if (result.error === 'ACCOUNT_SUSPENDED') {
+                        setError('Your account has been suspended. Please contact the system administrator.');
+                    } else {
+                        setError('Invalid username or password');
+                    }
                 } else if (result?.ok) {
                     router.push(callbackUrl);
                     router.refresh();
                 }
             }
         } catch (err: any) {
-            setError(err.message || 'Connection failed. Please check your network.');
+            if (err.message === 'ACCOUNT_PENDING') {
+                setError('Your account is pending administrator approval. You will be notified once it is activated.');
+            } else if (err.message === 'ACCOUNT_SUSPENDED') {
+                setError('Your account has been suspended. Please contact the system administrator.');
+            } else {
+                setError(err.message || 'Connection failed. Please check your network.');
+            }
         } finally {
             setLoading(false);
         }
     };
 
-    const fillDemoCredentials = (user: string = 'maj.harris') => {
-        setUsername(user);
-        setPassword('Demo123!');
-    };
-
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4 safe-all">
-            <div className="w-full max-w-md animate-fade-in">
-                {/* Logo */}
-                <div className="flex justify-center mb-6">
-                    <div className="relative">
-                        <div className="h-20 w-20 bg-gradient-to-br from-primary/20 to-accent/20 rounded-2xl flex items-center justify-center border border-primary/30 shadow-lg shadow-primary/20">
-                            <Shield className="h-10 w-10 text-primary" strokeWidth={2.5} />
-                        </div>
-                        <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-emerald-500 rounded-lg flex items-center justify-center shadow-lg">
-                            <Lock className="w-3.5 h-3.5 text-white" />
-                        </div>
-                    </div>
+        <AuthLayout
+            title="PulseLogic"
+            subtitle="Military Medical Decision Support"
+            showIllustration={true}
+        >
+            {/* Welcome message */}
+            <div className="mb-6 animate-fade-in">
+                <h2 className="text-lg font-bold text-white mb-1">Welcome back</h2>
+                <p className="text-sm text-slate-400">Sign in to access your clinical dashboard</p>
+            </div>
+
+            {/* Just-registered banner */}
+            {justRegistered && (
+                <div className="mb-5 p-3.5 bg-amber-500/10 border border-amber-500/25 rounded-xl flex items-start gap-3 text-amber-300 text-sm animate-slide-down">
+                    <CheckCircle2 size={18} className="flex-shrink-0 mt-0.5 text-amber-400" />
+                    <span>Registration submitted. Your account is pending administrator approval.</span>
+                </div>
+            )}
+
+            {/* Error message */}
+            {error && (
+                <div className="mb-5 p-3.5 bg-destructive/8 border border-destructive/25 rounded-xl flex items-center gap-3 text-red-400 text-sm animate-scale-in">
+                    <AlertTriangle size={18} className="flex-shrink-0" />
+                    <span>{error}</span>
+                </div>
+            )}
+
+            <form onSubmit={handleLogin} className="space-y-4">
+                {/* Username */}
+                <div className="animate-fade-in" style={{ animationDelay: '100ms', animationFillMode: 'backwards' }}>
+                    <AuthInput
+                        label="Username"
+                        icon={UserIcon}
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        required
+                        disabled={loading}
+                        autoComplete="username"
+                        error={error && !username ? 'Username is required' : undefined}
+                    />
                 </div>
 
-                {/* Title */}
-                <div className="text-center mb-6">
-                    <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">PulseLogic</h1>
-                    <p className="text-slate-400 text-sm">
-                        Military Medical Decision Support
-                    </p>
+                {/* Password */}
+                <div className="animate-fade-in" style={{ animationDelay: '200ms', animationFillMode: 'backwards' }}>
+                    <AuthInput
+                        label="Password"
+                        icon={Key}
+                        isPassword
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        disabled={loading}
+                        autoComplete="current-password"
+                    />
                 </div>
 
-                {/* Demo Banner */}
-                <div className="mb-6 p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-start gap-3">
-                    <AlertTriangle className="text-amber-400 flex-shrink-0 mt-0.5" size={18} />
-                    <div>
-                        <p className="text-amber-200 text-sm font-semibold">DEMO ENVIRONMENT</p>
-                        <p className="text-amber-300/70 text-xs mt-0.5">
-                            For demonstration purposes only. Not for clinical use.
-                        </p>
-                    </div>
-                </div>
+                {/* Submit */}
+                <div className="pt-2 animate-fade-in" style={{ animationDelay: '300ms', animationFillMode: 'backwards' }}>
+                    <button
+                        type="submit"
+                        disabled={loading || !username || !password}
+                        className="group w-full relative overflow-hidden bg-gradient-to-r from-primary to-accent disabled:from-slate-700 disabled:to-slate-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 flex items-center justify-center gap-2.5 active:scale-[0.98] min-h-[56px] disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                        {/* Shimmer effect on hover */}
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 translate-x-[-100%] group-hover:translate-x-[100%] transition-all duration-700" />
 
-                {/* Login Card */}
-                <div className="bg-slate-800/80 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-700/50 p-6 sm:p-8">
-                    {error && (
-                        <div className="mb-5 p-3 bg-red-500/10 border border-red-500/30 rounded-xl flex items-center gap-3 text-red-400 text-sm animate-scale-in">
-                            <AlertTriangle size={18} className="flex-shrink-0" />
-                            <span>{error}</span>
-                        </div>
-                    )}
-
-                    <form onSubmit={handleLogin} className="space-y-5">
-                        <div>
-                            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                                Username
-                            </label>
-                            <div className="relative">
-                                <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-                                <input
-                                    type="text"
-                                    value={username}
-                                    onChange={(e) => setUsername(e.target.value)}
-                                    className="w-full pl-11 pr-4 py-3.5 bg-slate-900/80 border border-slate-700 text-white rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all"
-                                    placeholder="Enter username"
-                                    required
-                                    disabled={loading}
-                                    autoComplete="username"
-                                />
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                                Password
-                            </label>
-                            <div className="relative">
-                                <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-                                <input
-                                    type={showPassword ? 'text' : 'password'}
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full pl-11 pr-12 py-3.5 bg-slate-900/80 border border-slate-700 text-white rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all"
-                                    placeholder="Enter password"
-                                    required
-                                    disabled={loading}
-                                    autoComplete="current-password"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-400 transition-colors"
-                                >
-                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                                </button>
-                            </div>
-                        </div>
-
-                        <button
-                            type="submit"
-                            disabled={loading || !username || !password}
-                            className="w-full bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 disabled:from-slate-600 disabled:to-slate-600 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 active:scale-[0.98] min-h-[52px]"
-                        >
+                        <span className="relative flex items-center gap-2.5">
                             {loading ? (
                                 <>
                                     <Loader2 className="animate-spin" size={18} />
@@ -163,102 +145,59 @@ function LoginForm() {
                                 </>
                             ) : (
                                 <>
-                                    <Lock size={18} />
-                                    Secure Login
+                                    <Lock size={17} />
+                                    Sign In
+                                    <ArrowRight size={16} className="opacity-60 group-hover:translate-x-0.5 transition-transform" />
                                 </>
                             )}
-                        </button>
-                    </form>
-
-                    <div className="mt-5 text-center">
-                        <p className="text-xs text-slate-500">
-                            Authorized personnel only. All access is monitored.
-                        </p>
-                    </div>
-
-                    {/* Demo Credentials */}
-                    <div className="mt-5 p-4 bg-slate-900/50 rounded-xl border border-slate-700/50">
-                        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Demo Credentials</p>
-
-                        {/* Army Medical Officer */}
-                        <div className="mb-3 p-2 rounded-lg bg-green-900/20 border border-green-800/30">
-                            <div className="flex items-center justify-between mb-1">
-                                <span className="text-xs font-medium text-green-400">Army Medical Officer</span>
-                                <button
-                                    type="button"
-                                    onClick={() => fillDemoCredentials('maj.harris')}
-                                    className="text-xs text-green-400 hover:text-green-300 font-medium transition-colors"
-                                >
-                                    Use
-                                </button>
-                            </div>
-                            <p className="text-[10px] text-slate-500 font-mono">maj.harris / Demo123!</p>
-                            <p className="text-[10px] text-slate-600 mt-0.5">Others: cpt.rodriguez, lt.chen</p>
-                        </div>
-
-                        {/* Public Medical Official */}
-                        <div className="mb-3 p-2 rounded-lg bg-blue-900/20 border border-blue-800/30">
-                            <div className="flex items-center justify-between mb-1">
-                                <span className="text-xs font-medium text-blue-400">Public Medical Official</span>
-                                <button
-                                    type="button"
-                                    onClick={() => fillDemoCredentials('dr.williams')}
-                                    className="text-xs text-blue-400 hover:text-blue-300 font-medium transition-colors"
-                                >
-                                    Use
-                                </button>
-                            </div>
-                            <p className="text-[10px] text-slate-500 font-mono">dr.williams / Demo123!</p>
-                            <p className="text-[10px] text-slate-600 mt-0.5">Others: dr.patel, dr.johnson</p>
-                        </div>
-
-                        {/* Admin */}
-                        <div className="p-2 rounded-lg bg-purple-900/20 border border-purple-800/30">
-                            <div className="flex items-center justify-between mb-1">
-                                <span className="text-xs font-medium text-purple-400">System Administrator</span>
-                                <button
-                                    type="button"
-                                    onClick={() => fillDemoCredentials('admin')}
-                                    className="text-xs text-purple-400 hover:text-purple-300 font-medium transition-colors"
-                                >
-                                    Use
-                                </button>
-                            </div>
-                            <p className="text-[10px] text-slate-500 font-mono">admin / Demo123!</p>
-                        </div>
-                    </div>
+                        </span>
+                    </button>
                 </div>
+            </form>
 
-                {/* Security Badges */}
-                <div className="mt-6 flex items-center justify-center gap-4 flex-wrap">
-                    <div className="flex items-center gap-2 text-emerald-400 text-xs bg-emerald-500/10 px-3 py-1.5 rounded-full">
-                        <Lock size={12} />
-                        <span className="font-medium">TLS 1.3 Encrypted</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-primary text-xs bg-primary/10 px-3 py-1.5 rounded-full">
-                        <Shield size={12} />
-                        <span className="font-medium">Zero-Trust Auth</span>
-                    </div>
+            {/* Divider */}
+            <div className="relative my-6 animate-fade-in" style={{ animationDelay: '350ms', animationFillMode: 'backwards' }}>
+                <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-slate-700/50" />
                 </div>
-
-                {/* Version */}
-                <div className="mt-6 text-center">
-                    <p className="text-[10px] text-slate-600 font-mono">
-                        PulseLogic v1.0.0 MVP (Demo)
-                    </p>
+                <div className="relative flex justify-center">
+                    <span className="bg-slate-900/60 px-3 text-[11px] text-slate-500 uppercase tracking-wider font-medium">
+                        or
+                    </span>
                 </div>
             </div>
-        </div>
+
+            {/* Register link */}
+            <div className="animate-fade-in" style={{ animationDelay: '400ms', animationFillMode: 'backwards' }}>
+                <Link
+                    href="/auth/register"
+                    className="group w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-slate-800/40 border border-slate-700/50 text-slate-300 text-sm font-medium hover:bg-slate-800/70 hover:border-slate-600/60 hover:text-white transition-all active:scale-[0.98] min-h-[48px]"
+                >
+                    <UserIcon size={15} className="text-primary" />
+                    Create New Account
+                    <ArrowRight size={14} className="opacity-40 group-hover:translate-x-0.5 group-hover:opacity-70 transition-all" />
+                </Link>
+            </div>
+
+            {/* Footer note */}
+            <p className="mt-5 text-center text-[11px] text-slate-600 animate-fade-in" style={{ animationDelay: '450ms', animationFillMode: 'backwards' }}>
+                Authorized personnel only. All access is monitored.
+            </p>
+        </AuthLayout>
     );
 }
 
-// Loading fallback for Suspense
 function LoginLoading() {
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-[#0a0f1a] to-slate-950 flex items-center justify-center p-4">
             <div className="flex flex-col items-center gap-4">
-                <Loader2 className="h-8 w-8 text-primary animate-spin" />
-                <p className="text-slate-400 text-sm">Loading...</p>
+                <div className="relative">
+                    <div className="absolute inset-0 bg-primary/20 rounded-2xl blur-xl animate-pulse" />
+                    <div className="relative w-16 h-16 bg-gradient-to-br from-primary/20 to-accent/15 rounded-2xl flex items-center justify-center border border-primary/20">
+                        <HeartPulse className="w-8 h-8 text-primary animate-pulse" />
+                    </div>
+                </div>
+                <p className="text-slate-400 text-sm font-medium">Loading PulseLogic...</p>
             </div>
         </div>
     );

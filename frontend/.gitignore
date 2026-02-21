@@ -32,3 +32,16 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Android signing
+android/keystore.properties
+android/keystore/
+*.jks
+
+# Tauri build output
+src-tauri/target/
+
+# IDE
+.idea/
+*.swp
+

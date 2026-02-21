@@ -34,7 +34,10 @@ export class ChatService {
         if (dto.type === ConversationType.USER_TO_USER) {
             // Verify chat permissions
             const permissions = ROLE_PERMISSIONS[user.role];
-            const canChat = permissions.canChatWithPublicOfficials || permissions.canChatWithArmyOfficers;
+            const canChat =
+                permissions.canChatWithPublicOfficials ||
+                permissions.canChatWithArmyOfficers ||
+                (permissions as any).canChatWithAdmins;
 
             if (!canChat) {
                 throw new ForbiddenException('You do not have permission to chat with other users');
@@ -75,7 +78,7 @@ export class ChatService {
                 type: ConversationType.USER_TO_AI,
                 title: dto.title || 'AI Assistant',
                 userId,
-                aiModel: dto.aiModel || 'gemini-pro',
+                aiModel: dto.aiModel || 'biomistral-7b',
                 metadata: { caseId: dto.caseId, context: dto.context },
             });
         }
@@ -146,9 +149,26 @@ export class ChatService {
         return messages.reverse();
     }
 
-    async sendMessage(userId: string, dto: SendMessageDto): Promise<Message> {
+    async sendMessage(userId: string, dto: SendMessageDto): Promise<{ message: Message; recipientId: string | null }> {
         const conversation = await this.getConversation(userId, dto.conversationId);
         const user = await this.userRepository.findOne({ where: { id: userId } });
+
+        // Determine recipient
+        let recipientId: string | null = null;
+        if (conversation.type === ConversationType.USER_TO_USER) {
+            recipientId = conversation.participant1Id === userId
+                ? conversation.participant2Id
+                : conversation.participant1Id;
+        }
+
+        // Build metadata
+        const metadata: Record<string, any> = {};
+        if (dto.replyToId) {
+            metadata.replyToId = dto.replyToId;
+        }
+        if (dto.attachmentUrl) {
+            metadata.attachments = [dto.attachmentUrl];
+        }
 
         const message = this.messageRepository.create({
             conversationId: dto.conversationId,
@@ -156,19 +176,25 @@ export class ChatService {
             senderType: MessageSender.USER,
             content: dto.content,
             isEncrypted: dto.isEncrypted || false,
-            metadata: dto.replyToId ? { replyToId: dto.replyToId } : undefined,
+            metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
         });
 
         const saved = await this.messageRepository.save(message);
 
-        // Update conversation
-        await this.conversationRepository.update(dto.conversationId, {
-            lastMessageAt: new Date(),
-            metadata: {
-                ...conversation.metadata,
-                lastMessagePreview: dto.content.substring(0, 100),
-            },
-        });
+        // Atomic update: increment unread count and update lastMessageAt
+        await this.conversationRepository
+            .createQueryBuilder()
+            .update(Conversation)
+            .set({
+                unreadCount: () => '"unreadCount" + 1',
+                lastMessageAt: new Date(),
+                metadata: {
+                    ...conversation.metadata,
+                    lastMessagePreview: dto.content.substring(0, 100),
+                },
+            })
+            .where('id = :id', { id: dto.conversationId })
+            .execute();
 
         await this.auditService.log({
             action: 'message_sent',
@@ -183,7 +209,7 @@ export class ChatService {
             },
         });
 
-        return saved;
+        return { message: saved, recipientId };
     }
 
     async sendAIMessage(userId: string, dto: SendAIMessageDto): Promise<{ userMessage: Message; aiResponse: Message }> {
@@ -213,6 +239,12 @@ export class ChatService {
                 systemPrompt: dto.systemPrompt,
             });
             aiResponseContent = response.response;
+            if (response.guidelines?.length > 0) {
+                const guidelineRefs = response.guidelines
+                    .map((g: any) => `[${g.title}]`)
+                    .join(', ');
+                aiResponseContent += `\n\n_Referenced guidelines: ${guidelineRefs}_`;
+            }
         } catch (error) {
             aiResponseContent = 'I apologize, but I encountered an error processing your request. Please try again.';
         }
@@ -256,12 +288,35 @@ export class ChatService {
     async markAsRead(userId: string, conversationId: string): Promise<void> {
         await this.getConversation(userId, conversationId);
 
-        await this.messageRepository.update(
-            { conversationId, status: MessageStatus.DELIVERED },
-            { status: MessageStatus.READ, readAt: new Date() }
-        );
+        // Mark both SENT and DELIVERED messages as READ (mark_read can fire before mark_delivered)
+        await this.messageRepository
+            .createQueryBuilder()
+            .update(Message)
+            .set({ status: MessageStatus.READ, readAt: new Date() })
+            .where('conversationId = :conversationId', { conversationId })
+            .andWhere('senderId != :userId', { userId })
+            .andWhere('status IN (:...statuses)', {
+                statuses: [MessageStatus.SENT, MessageStatus.DELIVERED],
+            })
+            .execute();
 
         await this.conversationRepository.update(conversationId, { unreadCount: 0 });
+    }
+
+    async updateMessageStatus(
+        conversationId: string,
+        excludeSenderId: string,
+        fromStatus: MessageStatus,
+        toStatus: MessageStatus,
+    ): Promise<void> {
+        await this.messageRepository
+            .createQueryBuilder()
+            .update(Message)
+            .set({ status: toStatus })
+            .where('conversationId = :conversationId', { conversationId })
+            .andWhere('senderId != :senderId', { senderId: excludeSenderId })
+            .andWhere('status = :status', { status: fromStatus })
+            .execute();
     }
 
     async getAvailableChatPartners(userId: string): Promise<User[]> {
@@ -273,9 +328,12 @@ export class ChatService {
         const permissions = ROLE_PERMISSIONS[user.role];
 
         // Build query based on permissions
+        // isActive = true is sufficient — pending users can't log in (enforced at auth),
+        // so they'll never query this endpoint with a valid JWT.
         const queryBuilder = this.userRepository.createQueryBuilder('user')
             .where('user.id != :userId', { userId })
-            .andWhere('user.isActive = :isActive', { isActive: true });
+            .andWhere('user.isActive = :isActive', { isActive: true })
+            .andWhere('user.deletedAt IS NULL');
 
         // Filter by allowed roles based on permissions
         const allowedRoles: string[] = [];
@@ -285,16 +343,24 @@ export class ChatService {
         if (permissions.canChatWithPublicOfficials) {
             allowedRoles.push('public_medical_official');
         }
+        if ((permissions as any).canChatWithAdmins) {
+            allowedRoles.push('admin');
+        }
 
+        // Only apply role filter if the user has restricted chat permissions
+        // (if allowedRoles is empty, no chat is allowed at all)
         if (allowedRoles.length > 0) {
             queryBuilder.andWhere('user.role IN (:...roles)', { roles: allowedRoles });
+        } else {
+            // No chat permissions — return empty
+            return [];
         }
 
         return queryBuilder.getMany();
     }
 
     async deleteConversation(userId: string, conversationId: string): Promise<void> {
-        const conversation = await this.getConversation(userId, conversationId);
+        await this.getConversation(userId, conversationId);
 
         await this.conversationRepository.update(conversationId, { isActive: false });
 

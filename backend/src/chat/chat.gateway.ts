@@ -8,15 +8,18 @@ import {
     MessageBody,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import { AuditService } from '../audit/audit.service';
 import { ChatService } from './chat.service';
-import { ConversationType } from './entities/conversation.entity';
+import { MessageStatus } from './entities/message.entity';
 
 interface SocketMessage {
     conversationId: string;
     content: string;
     encrypted?: boolean;
     replyToId?: string;
+    attachmentUrl?: string;
 }
 
 interface TypingIndicator {
@@ -25,10 +28,7 @@ interface TypingIndicator {
 }
 
 @WebSocketGateway({
-    cors: {
-        origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
-        credentials: true,
-    },
+    cors: { origin: true, credentials: true },
     namespace: '/chat',
 })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -41,16 +41,41 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     constructor(
         private auditService: AuditService,
         private chatService: ChatService,
+        private jwtService: JwtService,
+        private configService: ConfigService,
     ) {}
 
     async handleConnection(client: Socket) {
-        const userId = client.handshake.auth.userId;
-        const username = client.handshake.auth.username;
+        // Extract token from handshake auth or authorization header
+        const token =
+            client.handshake.auth?.token ||
+            (client.handshake.headers?.authorization?.startsWith('Bearer ')
+                ? client.handshake.headers.authorization.slice(7)
+                : null);
 
-        if (!userId) {
+        if (!token) {
+            client.emit('auth_error', { message: 'No authentication token provided' });
             client.disconnect();
             return;
         }
+
+        let payload: any;
+        try {
+            payload = this.jwtService.verify(token, {
+                secret: this.configService.get<string>('JWT_SECRET'),
+            });
+        } catch (err) {
+            client.emit('auth_error', { message: 'Invalid or expired token' });
+            client.disconnect();
+            return;
+        }
+
+        const userId: string = payload.sub;
+        const username: string = payload.username || 'unknown';
+
+        // Store verified identity on client
+        client.data.userId = userId;
+        client.data.username = username;
 
         // Track user connection
         this.socketToUser.set(client.id, userId);
@@ -76,14 +101,14 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         await this.auditService.log({
             action: 'chat_connect',
             userId,
-            username: username || 'unknown',
+            username,
             ipAddress: client.handshake.address,
             success: true,
         });
 
-        // Notify others that user is online
-        this.server.emit('user_online', { userId, username });
-        console.log(`User ${userId} connected to chat`);
+        // Notify others (not self) that user is online
+        client.broadcast.emit('user_online', { userId, username });
+        console.log(`User ${userId} (${username}) connected to chat`);
     }
 
     async handleDisconnect(client: Socket) {
@@ -98,14 +123,14 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
                 if (userSockets.size === 0) {
                     this.connectedUsers.delete(userId);
                     // Notify others that user is offline
-                    this.server.emit('user_offline', { userId });
+                    client.broadcast.emit('user_offline', { userId });
                 }
             }
 
             await this.auditService.log({
                 action: 'chat_disconnect',
                 userId,
-                username: 'unknown',
+                username: client.data.username || 'unknown',
                 ipAddress: client.handshake.address,
                 success: true,
             });
@@ -119,25 +144,39 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         @ConnectedSocket() client: Socket,
         @MessageBody() data: SocketMessage,
     ) {
-        const userId = this.socketToUser.get(client.id);
+        const userId = client.data.userId;
 
         if (!userId) {
             return { error: 'Not authenticated' };
         }
 
         try {
-            const message = await this.chatService.sendMessage(userId, {
+            const { message, recipientId } = await this.chatService.sendMessage(userId, {
                 conversationId: data.conversationId,
                 content: data.content,
                 isEncrypted: data.encrypted,
                 replyToId: data.replyToId,
+                attachmentUrl: data.attachmentUrl,
             });
 
             // Broadcast to conversation room
             this.server.to(`conversation:${data.conversationId}`).emit('new_message', {
                 ...message,
-                senderUsername: client.handshake.auth.username,
+                senderUsername: client.data.username,
             });
+
+            // Emit unread_update to recipient's personal room
+            if (recipientId) {
+                try {
+                    const conv = await this.chatService.getConversation(userId, data.conversationId);
+                    this.server.to(`user:${recipientId}`).emit('unread_update', {
+                        conversationId: data.conversationId,
+                        unreadCount: conv.unreadCount,
+                    });
+                } catch (_) {
+                    // Non-critical: unread count update can be skipped
+                }
+            }
 
             return { success: true, message };
         } catch (error) {
@@ -151,7 +190,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         @ConnectedSocket() client: Socket,
         @MessageBody() data: { conversationId: string; content: string },
     ) {
-        const userId = this.socketToUser.get(client.id);
+        const userId = client.data.userId;
 
         if (!userId) {
             return { error: 'Not authenticated' };
@@ -169,9 +208,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
             // Stop typing indicator
             client.emit('ai_typing', { conversationId: data.conversationId, isTyping: false });
 
-            // Broadcast user message and AI response to the user's room
-            this.server.to(`user:${userId}`).emit('new_message', result.userMessage);
-            this.server.to(`user:${userId}`).emit('new_message', result.aiResponse);
+            // Broadcast user message and AI response to the conversation room
+            // (all client tabs for this user are in the conversation room)
+            this.server.to(`conversation:${data.conversationId}`).emit('new_message', result.userMessage);
+            this.server.to(`conversation:${data.conversationId}`).emit('new_message', result.aiResponse);
 
             return { success: true, ...result };
         } catch (error) {
@@ -186,13 +226,13 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         @ConnectedSocket() client: Socket,
         @MessageBody() data: TypingIndicator,
     ) {
-        const userId = this.socketToUser.get(client.id);
+        const userId = client.data.userId;
         if (!userId) return;
 
         // Broadcast typing indicator to conversation room (except sender)
         client.to(`conversation:${data.conversationId}`).emit('user_typing', {
             userId,
-            username: client.handshake.auth.username,
+            username: client.data.username,
             conversationId: data.conversationId,
             isTyping: data.isTyping,
         });
@@ -203,7 +243,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         @ConnectedSocket() client: Socket,
         @MessageBody() conversationId: string,
     ) {
-        const userId = this.socketToUser.get(client.id);
+        const userId = client.data.userId;
         if (!userId) return { error: 'Not authenticated' };
 
         try {
@@ -230,14 +270,49 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         @ConnectedSocket() client: Socket,
         @MessageBody() conversationId: string,
     ) {
-        const userId = this.socketToUser.get(client.id);
+        const userId = client.data.userId;
         if (!userId) return { error: 'Not authenticated' };
 
         try {
             await this.chatService.markAsRead(userId, conversationId);
+            // Notify caller that unread is cleared
+            this.server.to(`user:${userId}`).emit('unread_cleared', { conversationId });
+            // Notify all conversation participants that messages were read (read receipts)
+            this.server.to(`conversation:${conversationId}`).emit('message_status', {
+                conversationId,
+                status: MessageStatus.READ,
+            });
             return { success: true };
         } catch (error) {
             return { error: 'Failed to mark as read' };
+        }
+    }
+
+    @SubscribeMessage('mark_delivered')
+    async handleMarkDelivered(
+        @ConnectedSocket() client: Socket,
+        @MessageBody() data: { conversationId: string },
+    ) {
+        const userId = client.data.userId;
+        if (!userId) return { error: 'Not authenticated' };
+
+        try {
+            await this.chatService.updateMessageStatus(
+                data.conversationId,
+                userId,
+                MessageStatus.SENT,
+                MessageStatus.DELIVERED,
+            );
+
+            // Notify conversation room of status change
+            this.server.to(`conversation:${data.conversationId}`).emit('message_status', {
+                conversationId: data.conversationId,
+                status: MessageStatus.DELIVERED,
+            });
+
+            return { success: true };
+        } catch (error) {
+            return { error: 'Failed to mark as delivered' };
         }
     }
 

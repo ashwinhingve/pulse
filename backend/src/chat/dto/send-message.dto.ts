@@ -14,6 +14,10 @@ export class SendMessageDto {
     @IsUUID()
     @IsOptional()
     replyToId?: string;
+
+    @IsString()
+    @IsOptional()
+    attachmentUrl?: string;
 }
 
 export class SendAIMessageDto {

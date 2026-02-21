@@ -1,9 +1,10 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { ConfigService } from '@nestjs/config';
 import { User } from './user.entity';
+import { UserRole, ClearanceLevel, UserStatus } from '../common/enums/roles.enum';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
@@ -24,11 +25,12 @@ export class UsersService {
             throw new ConflictException('Username already exists');
         }
 
-        const bcryptRounds = this.configService.get<number>('BCRYPT_ROUNDS', 12);
-        const passwordHash = await bcrypt.hash(createUserDto.password, bcryptRounds);
+        const bcryptRounds = parseInt(this.configService.get('BCRYPT_ROUNDS', '12'), 10);
+        const { password, ...rest } = createUserDto;
+        const passwordHash = await bcrypt.hash(password, bcryptRounds);
 
         const user = this.usersRepository.create({
-            ...createUserDto,
+            ...rest,
             passwordHash,
         });
 
@@ -63,8 +65,9 @@ export class UsersService {
         const user = await this.findOne(id);
 
         if (updateUserDto.password) {
-            const bcryptRounds = this.configService.get<number>('BCRYPT_ROUNDS', 12);
-            updateUserDto.password = await bcrypt.hash(updateUserDto.password, bcryptRounds);
+            const bcryptRounds = parseInt(this.configService.get('BCRYPT_ROUNDS', '12'), 10);
+            (updateUserDto as any).passwordHash = await bcrypt.hash(updateUserDto.password, bcryptRounds);
+            delete updateUserDto.password;
         }
 
         Object.assign(user, updateUserDto);
@@ -86,5 +89,38 @@ export class UsersService {
             lastLoginAt: new Date(),
             lastLoginIp: ipAddress,
         });
+    }
+
+    async findPending(): Promise<User[]> {
+        return this.usersRepository.find({
+            where: { status: UserStatus.PENDING, deletedAt: IsNull() },
+            order: { createdAt: 'ASC' },
+        });
+    }
+
+    async approveUser(
+        id: string,
+        role: UserRole,
+        clearanceLevel: ClearanceLevel,
+    ): Promise<User> {
+        const user = await this.findOne(id);
+        if (user.status !== UserStatus.PENDING) {
+            throw new ForbiddenException('User is not in pending state');
+        }
+        user.status = UserStatus.ACTIVE;
+        user.isActive = true;
+        user.role = role;
+        user.clearanceLevel = clearanceLevel;
+        return this.usersRepository.save(user);
+    }
+
+    async rejectUser(id: string): Promise<void> {
+        const user = await this.findOne(id);
+        if (user.status !== UserStatus.PENDING) {
+            throw new ForbiddenException('User is not in pending state');
+        }
+        // Soft-delete the rejected registration
+        user.deletedAt = new Date();
+        await this.usersRepository.save(user);
     }
 }

@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as speakeasy from 'speakeasy';
@@ -6,6 +6,7 @@ import * as QRCode from 'qrcode';
 import { UsersService } from '../users/users.service';
 import { AuditService } from '../audit/audit.service';
 import { User } from '../users/user.entity';
+import { UserStatus } from '../common/enums/roles.enum';
 import { LoginDto } from './dto/login.dto';
 
 export interface JwtPayload {
@@ -32,7 +33,7 @@ export class AuthService {
     async validateUser(username: string, password: string): Promise<User | null> {
         const user = await this.usersService.findByUsername(username);
 
-        if (!user || !user.isActive) {
+        if (!user) {
             return null;
         }
 
@@ -58,6 +59,37 @@ export class AuthService {
                 errorMessage: 'Invalid credentials',
             });
             throw new UnauthorizedException('Invalid credentials');
+        }
+
+        // Check account status AFTER verifying password (so we don't leak existence)
+        if (user.status === UserStatus.PENDING) {
+            await this.auditService.log({
+                action: 'login_failed_pending',
+                userId: user.id,
+                username: user.username,
+                ipAddress,
+                success: false,
+                errorMessage: 'Account pending approval',
+            });
+            throw new ForbiddenException({
+                code: 'ACCOUNT_PENDING',
+                message: 'Your account is pending administrator approval. You will be notified once your account is activated.',
+            });
+        }
+
+        if (user.status === UserStatus.SUSPENDED || !user.isActive) {
+            await this.auditService.log({
+                action: 'login_failed_suspended',
+                userId: user.id,
+                username: user.username,
+                ipAddress,
+                success: false,
+                errorMessage: 'Account suspended',
+            });
+            throw new ForbiddenException({
+                code: 'ACCOUNT_SUSPENDED',
+                message: 'Your account has been suspended. Please contact the system administrator.',
+            });
         }
 
         // Check MFA if enabled

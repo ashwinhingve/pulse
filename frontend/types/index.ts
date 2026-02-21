@@ -189,3 +189,116 @@ export interface MedicalCase {
     createdAt: string;
     updatedAt: string;
 }
+
+// Patient Types
+export enum Gender {
+    MALE = 'male',
+    FEMALE = 'female',
+    OTHER = 'other',
+}
+
+export interface Patient {
+    id: string;
+    firstName: string;
+    lastName: string;
+    dateOfBirth?: string;
+    gender: Gender;
+    bloodGroup?: string;
+    phone?: string;
+    email?: string;
+    address?: string;
+    emergencyContact?: string;
+    medicalHistory?: string;
+    allergies?: string;
+    createdBy: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
+// Doctor Types
+export interface Doctor {
+    id: string;
+    firstName: string;
+    lastName: string;
+    specialization: string;
+    licenseNumber?: string;
+    department?: string;
+    phone?: string;
+    email?: string;
+    qualification?: string;
+    experienceYears: number;
+    isAvailable: boolean;
+    userId?: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
+// Symptom Types
+export enum SymptomSeverity {
+    MILD = 'mild',
+    MODERATE = 'moderate',
+    SEVERE = 'severe',
+}
+
+export interface Symptom {
+    id: string;
+    name: string;
+    description?: string;
+    severity: SymptomSeverity;
+    bodyArea?: string;
+    duration?: string;
+    patientId: string;
+    patient?: Patient;
+    reportedBy: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
+// Diagnosis Types
+export enum DiagnosisStatus {
+    PRELIMINARY = 'preliminary',
+    CONFIRMED = 'confirmed',
+    RULED_OUT = 'ruled_out',
+}
+
+export interface Diagnosis {
+    id: string;
+    diseaseName: string;
+    description?: string;
+    icdCode?: string;
+    status: DiagnosisStatus;
+    notes?: string;
+    patientId: string;
+    patient?: Patient;
+    doctorId: string;
+    doctor?: Doctor;
+    diagnosedAt?: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
+// Report Types
+export enum ReportType {
+    LAB = 'lab',
+    IMAGING = 'imaging',
+    PRESCRIPTION = 'prescription',
+    DISCHARGE = 'discharge',
+    FOLLOWUP = 'followup',
+}
+
+export interface MedicalReport {
+    id: string;
+    title: string;
+    type: ReportType;
+    findings?: string;
+    recommendations?: string;
+    patientId: string;
+    patient?: Patient;
+    doctorId: string;
+    doctor?: Doctor;
+    diagnosisId?: string;
+    attachments?: string[];
+    createdAt: string;
+    updatedAt: string;
+}
+

@@ -7,26 +7,26 @@ import { UserRole } from '../common/enums/roles.enum';
 import { Public } from '../auth/decorators/public.decorator';
 
 @Controller('demo')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.ADMIN)
 export class DemoController {
     constructor(private readonly demoService: DemoService) { }
 
-    // Public endpoint for development - seeds demo data
+    // Admin-only: seeds initial demo data
     @Post('seed')
-    @Public()
     async seedData() {
         await this.demoService.seedDemoData();
         return { message: 'Demo data seeded successfully' };
     }
 
-    // Public endpoint for development - resets demo data
+    // Admin-only: resets demo data
     @Post('reset')
-    @Public()
     async resetData() {
         await this.demoService.resetDemoData();
         return { message: 'Demo data reset successfully' };
     }
 
-    // Health check endpoint
+    // Public health check endpoint
     @Get('health')
     @Public()
     async health() {

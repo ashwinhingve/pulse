@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="shieldGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2dd4bf"/>
+      <stop offset="100%" stop-color="#0ea5e9"/>
+    </linearGradient>
+    <linearGradient id="pulseGrad" x1="0" y1="0.5" x2="1" y2="0.5">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#e0f2fe" stop-opacity="1"/>
+    </linearGradient>
+  </defs>
+  <!-- Shield body -->
+  <path d="M256 28 C256 28 440 80 440 80 C440 80 440 260 440 300 C440 400 340 470 256 496 C172 470 72 400 72 300 C72 260 72 80 72 80 Z" fill="url(#shieldGrad)" stroke="none"/>
+  <!-- Inner shield highlight -->
+  <path d="M256 60 C256 60 412 106 412 106 C412 106 412 264 412 298 C412 384 322 444 256 466 C190 444 100 384 100 298 C100 264 100 106 100 106 Z" fill="none" stroke="white" stroke-opacity="0.15" stroke-width="4"/>
+  <!-- ECG/Pulse line -->
+  <polyline points="100,280 180,280 210,280 230,200 256,360 282,180 304,280 330,280 412,280" fill="none" stroke="url(#pulseGrad)" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

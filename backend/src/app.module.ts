@@ -10,6 +10,12 @@ import { AiModule } from './ai/ai.module';
 import { ChatModule } from './chat/chat.module';
 import { MedicalModule } from './medical/medical.module';
 import { DemoModule } from './demo/demo.module';
+import { PatientsModule } from './patients/patients.module';
+import { DoctorsModule } from './doctors/doctors.module';
+import { SymptomsModule } from './symptoms/symptoms.module';
+import { DiagnosesModule } from './diagnoses/diagnoses.module';
+import { ReportsModule } from './reports/reports.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 import { AuditInterceptor } from './audit/interceptors/audit.interceptor';
 
 @Module({
@@ -72,6 +78,12 @@ import { AuditInterceptor } from './audit/interceptors/audit.interceptor';
         ChatModule,
         MedicalModule,
         DemoModule,
+        PatientsModule,
+        DoctorsModule,
+        SymptomsModule,
+        DiagnosesModule,
+        ReportsModule,
+        DashboardModule,
     ],
     providers: [
         // Global audit interceptor

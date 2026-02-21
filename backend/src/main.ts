@@ -3,7 +3,6 @@ import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
-import { DemoService } from './demo/demo.service';
 
 async function bootstrap() {
     const app = await NestFactory.create(AppModule, {
@@ -24,13 +23,15 @@ async function bootstrap() {
                     scriptSrc: ["'self'"],
                     styleSrc: ["'self'", "'unsafe-inline'"],
                     imgSrc: ["'self'", 'data:', 'https:'],
-                    connectSrc: ["'self'"],
+                    connectSrc: ["'self'", 'http://localhost:3000', 'ws://localhost:3000', 'http://localhost:3001', 'ws://localhost:3001'],
                     fontSrc: ["'self'"],
                     objectSrc: ["'none'"],
                     mediaSrc: ["'self'"],
                     frameSrc: ["'none'"],
                 },
             },
+            // Disable crossOriginResourcePolicy so CORS works for API responses
+            crossOriginResourcePolicy: { policy: 'cross-origin' },
             hsts: {
                 maxAge: 31536000,
                 includeSubDomains: true,
@@ -66,19 +67,10 @@ async function bootstrap() {
     // API prefix
     app.setGlobalPrefix(apiPrefix);
 
-    // Auto-seed demo data (for demo deployment)
-    try {
-        const demoService = app.get(DemoService);
-        await demoService.seedDemoData();
-    } catch (error) {
-        console.log('⚠️ Demo seeding skipped (may already exist)');
-    }
-
     // Listen on all interfaces so Android emulator can connect
     await app.listen(port, '0.0.0.0');
     console.log(`🚀 PulseLogic Backend running on: http://0.0.0.0:${port}/${apiPrefix}`);
     console.log(`🔒 Security: Helmet enabled, CORS: ${corsOrigin}`);
-    console.log(`📋 Demo users: dr.smith, medic.jones, spec.wilson, admin (Password: Demo123!)`);
 }
 
 bootstrap();

@@ -3,11 +3,12 @@ import {
     IsEnum,
     IsInt,
     IsNotEmpty,
+    IsBoolean,
     MinLength,
     IsOptional,
     IsObject,
 } from 'class-validator';
-import { UserRole, ClearanceLevel } from '../../common/enums/roles.enum';
+import { UserRole, ClearanceLevel, UserStatus } from '../../common/enums/roles.enum';
 
 export class CreateUserDto {
     @IsString()
@@ -31,6 +32,14 @@ export class CreateUserDto {
     @IsOptional()
     clearanceLevel?: ClearanceLevel;
 
+    @IsEnum(UserStatus)
+    @IsOptional()
+    status?: UserStatus;
+
+    @IsBoolean()
+    @IsOptional()
+    isActive?: boolean;
+
     @IsString()
     @IsOptional()
     department?: string;
@@ -44,5 +53,6 @@ export class CreateUserDto {
         licenseNumber?: string;
         specialization?: string;
         unit?: string;
+        requestedRole?: string;
     };
 }

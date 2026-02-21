@@ -54,6 +54,14 @@ export class AuditService {
         return this.auditLogRepository.save(auditLog);
     }
 
+    async findAll(limit: number = 100, offset: number = 0): Promise<AuditLog[]> {
+        return this.auditLogRepository.find({
+            order: { timestamp: 'DESC' },
+            take: limit,
+            skip: offset,
+        });
+    }
+
     async findByUser(userId: string, limit: number = 100): Promise<AuditLog[]> {
         return this.auditLogRepository.find({
             where: { userId },

@@ -1,3 +1,9 @@
+export enum UserStatus {
+    PENDING = 'pending',
+    ACTIVE = 'active',
+    SUSPENDED = 'suspended',
+}
+
 export enum UserRole {
     // Core roles
     ARMY_MEDICAL_OFFICER = 'army_medical_officer',
@@ -26,6 +32,7 @@ export const ROLE_PERMISSIONS = {
         canAccessPublicCases: true,
         canChatWithPublicOfficials: true,
         canChatWithArmyOfficers: false, // Can't chat with same role
+        canChatWithAdmins: false,
         canChatWithAI: true,
         canViewClassifiedData: true,
         canCreateCases: true,
@@ -40,6 +47,7 @@ export const ROLE_PERMISSIONS = {
         canAccessPublicCases: true,
         canChatWithPublicOfficials: false, // Can't chat with same role
         canChatWithArmyOfficers: true,
+        canChatWithAdmins: false,
         canChatWithAI: true,
         canViewClassifiedData: false,
         canCreateCases: true,
@@ -54,6 +62,7 @@ export const ROLE_PERMISSIONS = {
         canAccessPublicCases: true,
         canChatWithPublicOfficials: true,
         canChatWithArmyOfficers: true,
+        canChatWithAdmins: true, // Admin can chat with everyone
         canChatWithAI: true,
         canViewClassifiedData: true,
         canCreateCases: true,

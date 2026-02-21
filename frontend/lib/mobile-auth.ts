@@ -69,8 +69,12 @@ export const mobileLogin = async (username: string, password: string): Promise<M
     });
 
     if (!loginRes.ok) {
-        const error = await loginRes.json().catch(() => ({}));
-        throw new Error(error.message || 'Invalid credentials');
+        const errData = await loginRes.json().catch(() => ({}));
+        const code = errData?.code || errData?.message?.code;
+        if (code === 'ACCOUNT_PENDING' || code === 'ACCOUNT_SUSPENDED') {
+            throw new Error(code);
+        }
+        throw new Error(errData.message || 'Invalid credentials');
     }
 
     const tokens: AuthTokens = await loginRes.json();
