@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -26,9 +27,16 @@ const sizeMap = {
 export default function Modal({
     open, onClose, title, subtitle, size = 'md', children, footer, className,
 }: ModalProps) {
+    // Avoid rendering portal during SSR
+    const [mounted, setMounted] = useState(false);
+
     const handleEsc = useCallback((e: KeyboardEvent) => {
         if (e.key === 'Escape') onClose();
     }, [onClose]);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     useEffect(() => {
         if (open) {
@@ -41,10 +49,19 @@ export default function Modal({
         };
     }, [open, handleEsc]);
 
-    return (
+    if (!mounted) return null;
+
+    // Render via portal so the modal is a direct child of document.body.
+    // This ensures z-50 is compared at the root stacking context, above the
+    // bottom tab bar (z-30) which is outside the main-scroll-content (z-10)
+    // stacking context.
+    return createPortal(
         <AnimatePresence>
             {open && (
-                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+                <div
+                    className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-0 sm:p-4"
+                    style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+                >
                     {/* Backdrop */}
                     <motion.div
                         initial={{ opacity: 0 }}
@@ -62,7 +79,7 @@ export default function Modal({
                         exit={{ opacity: 0, y: 20, scale: 0.97 }}
                         transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
                         className={cn(
-                            'relative w-full bg-card rounded-t-2xl sm:rounded-2xl shadow-2xl border border-border/50 max-h-[92vh] flex flex-col overflow-hidden',
+                            'relative w-full bg-card rounded-t-2xl sm:rounded-2xl shadow-2xl border border-border/50 max-h-[90vh] flex flex-col overflow-hidden',
                             sizeMap[size],
                             className
                         )}
@@ -96,6 +113,7 @@ export default function Modal({
                     </motion.div>
                 </div>
             )}
-        </AnimatePresence>
+        </AnimatePresence>,
+        document.body
     );
 }

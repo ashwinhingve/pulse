@@ -334,7 +334,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 )}
 
                 {/* ── Main content ── */}
-                <div className="flex-1 flex flex-col min-w-0 overflow-y-auto scrollbar-thin relative z-10 main-scroll-content">
+                <div className="flex-1 flex flex-col min-w-0 overflow-y-auto scrollbar-thin relative main-scroll-content">
                     {/* ── Colored mobile top header ── */}
                     <div className="lg:hidden relative z-20 flex flex-col bg-gradient-to-r from-primary via-primary to-accent/90 text-white shadow-md flex-shrink-0" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
                     <div className="flex items-center h-12 px-4">
