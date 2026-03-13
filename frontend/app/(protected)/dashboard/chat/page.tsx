@@ -601,6 +601,8 @@ export default function ChatPage() {
                         </div>
                     </div>
                 )}
+                {/* Mobile Bottom Spacer */}
+                <div className="h-[80px] lg:hidden w-full flex-shrink-0" aria-hidden="true" />
             </main>
 
             {/* New Chat Modal */}

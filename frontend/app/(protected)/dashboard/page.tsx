@@ -199,7 +199,7 @@ export default function DashboardPage() {
                                     <motion.div
                                         initial={{ opacity: 0, y: 8, scale: 0.95 }}
                                         animate={{ opacity: 1, y: 0, scale: 1 }}
-                                        className="absolute right-0 top-12 w-60 glass-card shadow-glass-lg z-50 overflow-hidden"
+                                        className="absolute right-0 top-12 w-60 bg-background/95 backdrop-blur-xl border border-border/60 shadow-2xl rounded-2xl z-50 overflow-hidden"
                                     >
                                         <div className="p-4 border-b border-border/50 bg-primary/[0.03]">
                                             <div className="flex items-center gap-3">
@@ -322,7 +322,7 @@ export default function DashboardPage() {
                         <h2 className="text-base font-semibold text-foreground mb-4 font-display">
                             {isArmyOfficer ? 'Field Medical Tools' : isPublicOfficial ? 'Public Health Tools' : 'System Tools'}
                         </h2>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                             {features.map((feature, i) => {
                                 const Icon = feature.icon;
                                 return (
@@ -332,7 +332,7 @@ export default function DashboardPage() {
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: 0.05 * i, duration: 0.3 }}
                                         onClick={() => router.push(feature.href)}
-                                        className="glass-card p-5 text-left group relative overflow-hidden hover:shadow-glass-lg hover:-translate-y-0.5 transition-all duration-300 active:scale-[0.98]"
+                                        className="glass-card p-5 text-left group relative overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300 active:scale-[0.98]"
                                     >
                                         <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <ChevronRight size={16} className="text-muted-foreground" />
@@ -383,6 +383,8 @@ export default function DashboardPage() {
                         </div>
                     </div>
                 </div>
+                {/* Mobile Bottom Spacer */}
+                <div className="h-[80px] lg:hidden w-full flex-shrink-0" aria-hidden="true" />
             </main>
         </div>
     );

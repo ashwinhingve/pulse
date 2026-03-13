@@ -182,6 +182,8 @@ export default function DoctorsPage() {
                         </div>
                     )}
                 </div>
+                {/* Mobile Bottom Spacer */}
+                <div className="h-[80px] lg:hidden w-full flex-shrink-0" aria-hidden="true" />
             </main>
 
             <Modal
