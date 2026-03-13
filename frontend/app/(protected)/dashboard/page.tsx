@@ -244,7 +244,7 @@ export default function DashboardPage() {
 
             {/* ── Main ── */}
             <main className="flex-1 w-full">
-                <div className="container-app space-y-6 pb-8 max-w-7xl">
+                <div className="container-app space-y-6 pb-24 lg:pb-8 max-w-7xl">
 
                     {/* Welcome banner */}
                     <motion.div

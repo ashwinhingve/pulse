@@ -91,7 +91,7 @@ export default function CasesPage() {
             />
 
             <main className="flex-1 w-full">
-                <div className="container-app space-y-4 pb-8 max-w-4xl animate-fade-in">
+                <div className="container-app space-y-4 pb-24 lg:pb-8 max-w-4xl animate-fade-in">
                     {error && <ErrorBanner message={error} onDismiss={() => setError('')} />}
 
                     <div className="flex gap-2">

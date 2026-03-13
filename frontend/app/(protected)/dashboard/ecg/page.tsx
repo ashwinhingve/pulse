@@ -247,7 +247,19 @@ export default function ECGPage() {
             />
 
             <main className="flex-1 w-full">
+<<<<<<< HEAD
                 <div className="container-app space-y-5 pb-8 max-w-4xl animate-fade-in">
+=======
+                <div className="container-app space-y-6 pb-24 lg:pb-8 max-w-4xl animate-fade-in">
+                    {/* Upload Section */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className="glass-card p-6"
+                    >
+                        <h2 className="text-base font-semibold text-foreground mb-4">Upload ECG Recording</h2>
+>>>>>>> 08d69f4dbd286e3af514a4cddf5c902cbea521f0
 
                     {/* ── Upload Card ── */}
                     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}

@@ -1,5 +1,5 @@
 # PulseLogic — Secure Military Medical Decision Support
-
+hi
 A secure, multi-platform medical decision-support system with role-based access control,
 clearance-level gating, AI-powered diagnostics, and offline-capable mobile/desktop clients.
 
@@ -76,14 +76,26 @@ pulse/
 | npm | 10+ |
 
 ###
+<<<<<<< HEAD
 ```bash
 docker-compose up -d           # start PostgreSQL + Redis
 ```
+=======
+```
+docker-compose up -d  # start PostgreSQL + Redis
+ ``` 
+
+### Backend
+>>>>>>> 08d69f4dbd286e3af514a4cddf5c902cbea521f0
 
 ### Backend
 ```bash
 cd backend
+<<<<<<< HEAD
 cp .env.example .env          # fill in secrets
+=======
+cp .env.example .env          # fill in secrets        
+>>>>>>> 08d69f4dbd286e3af514a4cddf5c902cbea521f0
 npm install
 npm run start:dev
 ```
@@ -126,7 +138,7 @@ Capacitor 8.x requires **Java 21** (hardcoded in the library).
 ```powershell
 winget install Microsoft.OpenJDK.21
 ```
-
+gfhgfht htrh t
 Verify:
 ```cmd
 java -version
@@ -562,3 +574,6 @@ NEXTAUTH_SECRET=<random-32-char-string>
 ## License
 
 UNLICENSED — Proprietary software. All rights reserved.
+
+
+ashwin

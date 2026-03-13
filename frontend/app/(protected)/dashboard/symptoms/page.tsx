@@ -176,7 +176,7 @@ export default function SymptomsPage() {
             />
 
             <main className="flex-1 w-full">
-                <div className="container-app space-y-5 pb-8 max-w-4xl animate-fade-in">
+                <div className="container-app space-y-5 pb-24 lg:pb-8 max-w-4xl animate-fade-in">
                 {/* Disclaimer banner */}
                 <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/10 dark:to-orange-900/10 border border-amber-200 dark:border-amber-800/50 rounded-2xl p-4 flex items-start gap-3">
                     <div className="w-8 h-8 bg-amber-100 dark:bg-amber-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -353,14 +353,11 @@ export default function SymptomsPage() {
                     />
                 </div>
 
-                {/* Error */}
-                {error && <ErrorBanner message={error} onDismiss={() => setError('')} />}
-
                 {/* Analyze button */}
                 <button
                     onClick={handleAnalyze}
                     disabled={isLoading || selectedSymptoms.length === 0}
-                    className="w-full btn-primary py-4 rounded-2xl flex items-center justify-center gap-3 text-base font-bold shadow-soft disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:shadow-soft-lg"
+                    className="w-full btn-primary py-4 rounded-2xl flex items-center justify-center gap-3 text-base font-bold shadow-soft disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:shadow-soft-lg relative z-50"
                 >
                     {isLoading ? (
                         <>
@@ -379,6 +376,9 @@ export default function SymptomsPage() {
                         </>
                     )}
                 </button>
+
+                {/* Error */}
+                {error && <ErrorBanner message={error} onDismiss={() => setError('')} />}
 
                 {/* Results */}
                 {analysis && (
@@ -434,6 +434,10 @@ export default function SymptomsPage() {
                         </div>
                     </div>
                 )}
+                
+                {/* Mobile Bottom Spacer - ensures content is not hidden behind the fixed bottom floating navbar */}
+                <div className="h-[80px] lg:hidden w-full flex-shrink-0" aria-hidden="true" />
+                
                 </div>
             </main>
         </div>

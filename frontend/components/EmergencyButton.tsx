@@ -7,7 +7,10 @@ const EmergencyButton: React.FC = () => {
     const [isOpen, setIsOpen] = useState(false);
 
     return (
-        <div className="fixed bottom-6 right-6 z-50">
+        <div 
+            className="fixed right-6 z-50 max-lg:bottom-[80px] lg:bottom-6" 
+            style={{ marginBottom: 'env(safe-area-inset-bottom, 0px)' }}
+        >
             {isOpen && (
                 <div className="absolute bottom-16 right-0 w-64 glass-card rounded-2xl shadow-2xl p-6 border-red-200 dark:border-red-900/30 animate-scale-in">
                     <h4 className="text-red-600 dark:text-red-400 font-bold mb-3 flex items-center gap-2 text-sm">
