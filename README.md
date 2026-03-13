@@ -277,7 +277,7 @@ This generates all required sizes in `src-tauri/icons/`.
 cd frontend
 
 # Copy desktop environment
-cp .env.desktop .env.local    # Windows: copy .env.desktop .env.local
+cp .env.desktop .env.local    # Windows: copy .env.desktop .env.local 
 
 # Build (produces native installer for current platform)
 npx tauri build
@@ -575,5 +575,3 @@ NEXTAUTH_SECRET=<random-32-char-string>
 
 UNLICENSED — Proprietary software. All rights reserved.
 
-
-ashwin
