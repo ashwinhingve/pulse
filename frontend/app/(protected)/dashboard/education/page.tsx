@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
     ArrowLeft, Search, X, Send, Loader2, ShieldCheck,
     Wind, Droplets, Soup, Microscope, Heart, Activity,
-    Bug, Shield, BookOpen, Stethoscope,
+    Bug, Shield, BookOpen, Stethoscope, FlaskConical, PlusCircle, Library, ClipboardList, Pill, Syringe, HeartPulse, Brain, Bone,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useAuthStore } from '@/lib/store/auth';
@@ -21,6 +21,20 @@ interface EducationArticle {
     icon: string;
     summary: string;
     content: string;
+}
+
+interface LibraryBook {
+    id: string;
+    title: string;
+    subtitle: string;
+    icon: LucideIcon;
+    color: string;           // Tailwind gradient classes
+    accentColor: string;     // hex or tailwind color for header bg
+    articles: EducationArticle[];
+    categories: string[];
+    reference: string;
+    version: string;
+    comingSoon?: boolean;
 }
 
 // ─── Icon mapping from FA classes to Lucide components ───────────────────────
@@ -45,9 +59,9 @@ function ArticleIcon({ icon, size = 18, className }: { icon: string; size?: numb
     return <Icon size={size} className={className} />;
 }
 
-// ─── Article Database (AIIMS Antibiotic Policy) ──────────────────────────────
+// ─── AIIMS Antibiotic Policy Articles ────────────────────────────────────────
 
-const ARTICLES: EducationArticle[] = [
+const AIIMS_ARTICLES: EducationArticle[] = [
     // SECTION 1: RESPIRATORY
     {
         id: '1.1.1',
@@ -135,7 +149,50 @@ const ARTICLES: EducationArticle[] = [
     },
 ];
 
-const CATEGORIES = ['All', 'Clinical', 'Criteria', 'Laboratory', 'Imaging', 'General'];
+// ─── GP / MO Guide Articles ──────────────────────────────────────────────────
+// Content to be populated from OCR word document
+
+const GP_MO_ARTICLES: EducationArticle[] = [
+    // Placeholder — full content loading from OCR
+    {
+        id: 'intro',
+        title: 'About This Guide',
+        category: 'General',
+        icon: 'fa-stethoscope',
+        summary: 'General Practitioner & Medical Officer clinical reference guide.',
+        content:
+            '### Purpose\nThis guide is intended for General Practitioners and Medical Officers as a quick-reference clinical handbook.\n\n### How to Use\n- Use the category filters to browse by system.\n- Search for a drug name (generic or brand) or condition.\n- Each entry includes diagnosis criteria, first-line treatment, and drug dosing.\n\n### Note\nFull content is being loaded from the source document. Check back for updates.',
+    },
+];
+
+// ─── Library Books Registry ───────────────────────────────────────────────────
+
+const LIBRARY_BOOKS: LibraryBook[] = [
+    {
+        id: 'aiims-antibiotic',
+        title: 'AIIMS Antibiotic Policy',
+        subtitle: 'Institutional antibiotic guidelines for infectious disease management',
+        icon: FlaskConical,
+        color: 'from-emerald-500 to-teal-600',
+        accentColor: '#0f766e',
+        articles: AIIMS_ARTICLES,
+        categories: ['All', 'Clinical', 'Criteria', 'Laboratory', 'Imaging', 'General'],
+        reference: 'Institutional Reference: AIIMS Antibiotic Policy, New Delhi',
+        version: 'v2.5.0',
+    },
+    {
+        id: 'gp-mo-guide',
+        title: 'GP / MO Guide',
+        subtitle: 'General Practitioner & Medical Officer clinical handbook — drugs, doses & conditions',
+        icon: ClipboardList,
+        color: 'from-blue-500 to-indigo-600',
+        accentColor: '#3730a3',
+        articles: GP_MO_ARTICLES,
+        categories: ['All', 'General', 'Respiratory', 'Gastrointestinal', 'Cardiovascular', 'Neurology', 'Musculoskeletal', 'Paediatrics', 'Obstetrics', 'Drugs'],
+        reference: 'GP / MO Clinical Reference Guide — Field Edition',
+        version: 'v1.0',
+    },
+];
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
@@ -193,10 +250,9 @@ const FormattedClinicalData: React.FC<{ text: string }> = ({ text }) => {
     return <div className="animate-fade-in">{elements}</div>;
 };
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
+// ─── BookViewer: Article listing + detail for a single book ──────────────────
 
-export default function HealthEducationPage() {
-    const router = useRouter();
+function BookViewer({ book, onBack }: { book: LibraryBook; onBack: () => void }) {
     const { user, accessToken } = useAuthStore();
     const { data: nextAuthSession } = useSession();
 
@@ -216,7 +272,7 @@ export default function HealthEducationPage() {
 
     const filteredArticles = useMemo(() => {
         const query = search.toLowerCase().trim();
-        return ARTICLES.filter(a => {
+        return book.articles.filter(a => {
             const matchesSearch =
                 query === '' ||
                 a.title.toLowerCase().includes(query) ||
@@ -226,7 +282,7 @@ export default function HealthEducationPage() {
             const matchesCategory = selectedCategory === 'All' || a.category === selectedCategory;
             return matchesSearch && matchesCategory;
         });
-    }, [search, selectedCategory]);
+    }, [search, selectedCategory, book]);
 
     const getToken = async (): Promise<string | null> => {
         if (accessToken) return accessToken;
@@ -264,7 +320,6 @@ export default function HealthEducationPage() {
                 const data = await res.json();
                 aiText = data.protocol || data.response || JSON.stringify(data);
             } else {
-                // Fallback: search guidelines endpoint
                 const gRes = await fetch(`${API_URL}/ai/guidelines/search?q=${encodeURIComponent(userMsg)}`, {
                     headers: token ? { Authorization: `Bearer ${token}` } : {},
                 });
@@ -295,308 +350,396 @@ export default function HealthEducationPage() {
     const isSearchActive = search.trim().length > 0;
 
     return (
-        <div className="min-h-screen bg-background">
-            <div className="max-w-3xl mx-auto px-4 pb-24 space-y-4 sm:space-y-6 animate-fade-in">
-                {/* Header */}
-                <div className="bg-[#0f766e] dark:bg-slate-950 rounded-b-none sm:rounded-b-[2rem] rounded-t-none -mx-4 px-6 pt-6 pb-6 text-white shadow-xl relative overflow-hidden transition-colors">
-                    <div className="relative z-10 space-y-4">
-                        <button
-                            onClick={() => router.back()}
-                            className="text-[10px] font-black uppercase tracking-widest text-emerald-100/70 hover:text-white transition-colors flex items-center gap-2"
-                        >
-                            <ArrowLeft size={14} /> Back
-                        </button>
-
-                        <h1 className="text-xl sm:text-2xl font-black tracking-tight leading-none">
-                            AIIMS Antibiotic Policy
-                        </h1>
-                        <p className="text-xs text-emerald-100/60 font-medium">
-                            Clinical reference library for infectious disease management
+        <div className="space-y-4 sm:space-y-6 animate-fade-in">
+            {/* Book Header */}
+            <div
+                className="rounded-2xl -mx-4 px-6 pt-6 pb-6 text-white shadow-xl relative overflow-hidden"
+                style={{ background: book.accentColor }}
+            >
+                <div className="relative z-10 space-y-4">
+                    <button
+                        onClick={() => { setSelectedArticle(null); onBack(); }}
+                        className="text-[10px] font-black uppercase tracking-widest text-white/70 hover:text-white transition-colors flex items-center gap-2"
+                    >
+                        <ArrowLeft size={14} /> Back to Library
+                    </button>
+                    <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-white/50 mb-1">
+                            Medical Library
                         </p>
+                        <h2 className="text-xl sm:text-2xl font-black tracking-tight leading-none">
+                            {book.title}
+                        </h2>
+                        <p className="text-xs text-white/60 font-medium mt-1">{book.subtitle}</p>
+                    </div>
 
-                        {/* Search */}
-                        <div className="relative group">
-                            <Search
-                                size={16}
-                                className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-100/50 group-focus-within:text-white transition-colors"
-                            />
-                            <input
-                                type="text"
-                                placeholder="Search (e.g. allergy, pneumonia, 5.1)..."
-                                className="w-full pl-11 pr-11 py-3 rounded-xl bg-white/10 border border-white/20 shadow-inner focus:bg-white/20 outline-none transition-all placeholder:text-emerald-100/40 text-sm text-white"
-                                value={search}
-                                onChange={e => setSearch(e.target.value)}
-                            />
-                            {isSearchActive && (
-                                <button
-                                    onClick={() => setSearch('')}
-                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-white/50 hover:text-white"
-                                >
-                                    <X size={16} />
-                                </button>
-                            )}
+                    {/* Search */}
+                    <div className="relative group">
+                        <Search
+                            size={16}
+                            className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50 group-focus-within:text-white transition-colors"
+                        />
+                        <input
+                            type="text"
+                            placeholder="Search articles, drugs, conditions..."
+                            className="w-full pl-11 pr-11 py-3 rounded-xl bg-white/10 border border-white/20 shadow-inner focus:bg-white/20 outline-none transition-all placeholder:text-white/40 text-sm text-white"
+                            value={search}
+                            onChange={e => setSearch(e.target.value)}
+                        />
+                        {isSearchActive && (
+                            <button
+                                onClick={() => setSearch('')}
+                                className="absolute right-4 top-1/2 -translate-y-1/2 text-white/50 hover:text-white"
+                            >
+                                <X size={16} />
+                            </button>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* Article list or detail */}
+            {!selectedArticle && (
+                <div className="space-y-6">
+                    {isSearchActive ? (
+                        <div className="space-y-4 animate-fade-in">
+                            <div className="px-1 flex justify-between items-center">
+                                <p className="text-xs font-black text-slate-400 uppercase tracking-widest">
+                                    {filteredArticles.length} results found
+                                </p>
+                            </div>
+                            <div className="space-y-3 px-1">
+                                {filteredArticles.map(article => (
+                                    <button
+                                        key={article.id}
+                                        onClick={() => setSelectedArticle(article)}
+                                        className="w-full glass-card p-5 rounded-2xl hover:shadow-md hover:border-emerald-200 dark:hover:border-emerald-900 transition-all text-left flex flex-col gap-2 group"
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <span className="px-1.5 py-0.5 bg-primary/10 text-primary text-[9px] font-black rounded border border-primary/20">
+                                                {article.id}
+                                            </span>
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">
+                                                {article.category}
+                                            </span>
+                                        </div>
+                                        <h3 className="font-black text-slate-800 dark:text-white text-base leading-tight group-hover:text-emerald-600 transition-colors">
+                                            {article.title}
+                                        </h3>
+                                        <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed font-medium">
+                                            {article.summary}
+                                        </p>
+                                    </button>
+                                ))}
+                                {filteredArticles.length === 0 && (
+                                    <div className="py-12 text-center">
+                                        <p className="text-sm text-slate-400">No articles match your search.</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            <div className="flex gap-1.5 overflow-x-auto pb-3 scrollbar-hidden px-1 snap-x snap-mandatory">
+                                {book.categories.map(cat => (
+                                    <button
+                                        key={cat}
+                                        onClick={() => setSelectedCategory(cat)}
+                                        className={`snap-start whitespace-nowrap px-5 py-2.5 rounded-xl text-[8px] sm:text-[10px] font-black uppercase tracking-widest transition-all border shrink-0 ${
+                                            selectedCategory === cat
+                                                ? 'text-white border-transparent shadow-lg'
+                                                : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-100 dark:border-slate-800'
+                                        }`}
+                                        style={selectedCategory === cat ? { background: book.accentColor } : {}}
+                                    >
+                                        {cat}
+                                    </button>
+                                ))}
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 px-1">
+                                {filteredArticles.map(article => (
+                                    <button
+                                        key={article.id}
+                                        onClick={() => setSelectedArticle(article)}
+                                        className="glass-card p-4 rounded-2xl hover:shadow-md transition-all text-left flex items-start gap-4 group"
+                                    >
+                                        <div
+                                            className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-50 dark:bg-slate-800 rounded-xl flex items-center justify-center text-slate-400 transition-all shrink-0"
+                                            style={{ ['--hover-bg' as any]: book.accentColor }}
+                                        >
+                                            <ArticleIcon icon={article.icon} size={18} className="group-hover:text-white transition-colors" />
+                                        </div>
+                                        <div className="flex-grow min-w-0">
+                                            <span className="text-[7px] font-black uppercase tracking-widest mb-0.5 block" style={{ color: book.accentColor }}>
+                                                {article.id} • {article.category}
+                                            </span>
+                                            <h3 className="font-black text-slate-900 dark:text-white text-xs sm:text-sm leading-tight truncate">
+                                                {article.title}
+                                            </h3>
+                                            <p className="text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400 mt-1 line-clamp-2 leading-relaxed font-medium">
+                                                {article.summary}
+                                            </p>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Article Detail */}
+            {selectedArticle && (
+                <div className="glass-card rounded-[2rem] overflow-hidden shadow-xl animate-slide-up transition-colors">
+                    <div className="px-6 pt-6 pb-4 flex items-center">
+                        <button
+                            onClick={() => setSelectedArticle(null)}
+                            className="font-black text-[9px] uppercase tracking-widest flex items-center gap-2 hover:opacity-70 transition-opacity"
+                            style={{ color: book.accentColor }}
+                        >
+                            <ArrowLeft size={12} /> Back to Index
+                        </button>
+                    </div>
+                    <div className="px-6 sm:px-10 pb-12 space-y-6">
+                        <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 text-white rounded-xl flex items-center justify-center shadow-lg" style={{ background: book.accentColor }}>
+                                    <ArticleIcon icon={selectedArticle.icon} size={14} />
+                                </div>
+                                <span className="font-black text-[8px] uppercase tracking-widest" style={{ color: book.accentColor }}>
+                                    {selectedArticle.id} • {selectedArticle.category}
+                                </span>
+                            </div>
+                            <h2 className="text-xl sm:text-3xl font-black text-slate-900 dark:text-white leading-tight tracking-tight">
+                                {selectedArticle.title}
+                            </h2>
+                        </div>
+                        <div className="p-4 bg-slate-50 dark:bg-slate-950/40 rounded-2xl border-l-4 text-slate-600 dark:text-slate-400 text-[10px] sm:text-xs italic font-medium leading-relaxed" style={{ borderColor: book.accentColor }}>
+                            {selectedArticle.summary}
+                        </div>
+                        <div className="prose prose-slate dark:prose-invert max-w-none">
+                            <FormattedClinicalData text={selectedArticle.content} />
                         </div>
                     </div>
                 </div>
+            )}
 
-                {/* Article List or Detail */}
-                {!selectedArticle && (
-                    <div className="space-y-6">
-                        {isSearchActive ? (
-                            /* Search Results */
-                            <div className="space-y-4 animate-fade-in">
-                                <div className="px-1 flex justify-between items-center">
-                                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest">
-                                        {filteredArticles.length} results found
-                                    </p>
-                                </div>
-                                <div className="space-y-3 px-1">
-                                    {filteredArticles.map(article => (
-                                        <button
-                                            key={article.id}
-                                            onClick={() => setSelectedArticle(article)}
-                                            className="w-full glass-card p-5 rounded-2xl hover:shadow-md hover:border-emerald-200 dark:hover:border-emerald-900 transition-all text-left flex flex-col gap-2 group"
-                                        >
-                                            <div className="flex items-center gap-2">
-                                                <span className="px-1.5 py-0.5 bg-primary/10 text-primary text-[9px] font-black rounded border border-primary/20">
-                                                    {article.id}
-                                                </span>
-                                                <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">
-                                                    {article.category}
-                                                </span>
-                                            </div>
-                                            <h3 className="font-black text-slate-800 dark:text-white text-base leading-tight group-hover:text-emerald-600 transition-colors">
-                                                {article.title}
-                                            </h3>
-                                            <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed font-medium">
-                                                {article.summary}
-                                            </p>
-                                        </button>
-                                    ))}
-                                    {filteredArticles.length === 0 && (
-                                        <div className="py-12 text-center">
-                                            <p className="text-sm text-slate-400">No articles match your search.</p>
-                                        </div>
-                                    )}
+            {/* Chat */}
+            {!selectedArticle && !isSearchActive && (
+                <div className="glass-card rounded-[1.5rem] shadow-xl overflow-hidden flex flex-col h-[380px] transition-all">
+                    <div className="bg-slate-900 dark:bg-slate-950 p-4 text-white flex items-center justify-between shrink-0">
+                        <div className="flex items-center gap-3">
+                            <div
+                                className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
+                                    loadingChat ? 'bg-emerald-500 shadow-lg shadow-emerald-500/50 scale-105' : ''
+                                }`}
+                                style={!loadingChat ? { background: book.accentColor } : {}}
+                            >
+                                <Stethoscope size={14} className={loadingChat ? 'animate-pulse' : ''} />
+                            </div>
+                            <div>
+                                <p className="font-black text-[10px] uppercase tracking-tight leading-none">
+                                    Diagnostic Assistant
+                                </p>
+                                <div className="flex items-center gap-1.5 mt-1 leading-none">
+                                    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse-soft" />
+                                    <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest">
+                                        Logic Live
+                                    </span>
                                 </div>
                             </div>
-                        ) : (
-                            /* Category Grid */
-                            <div className="space-y-4">
-                                <div className="flex gap-1.5 overflow-x-auto pb-3 scrollbar-hidden px-1 snap-x snap-mandatory">
-                                    {CATEGORIES.map(cat => (
-                                        <button
-                                            key={cat}
-                                            onClick={() => setSelectedCategory(cat)}
-                                            className={`snap-start whitespace-nowrap px-5 py-2.5 rounded-xl text-[8px] sm:text-[10px] font-black uppercase tracking-widest transition-all border shrink-0 ${
-                                                selectedCategory === cat
-                                                    ? 'bg-[#0f766e] text-white border-[#0f766e] shadow-lg shadow-emerald-600/20'
-                                                    : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-100 dark:border-slate-800'
-                                            }`}
-                                        >
-                                            {cat}
-                                        </button>
-                                    ))}
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-emerald-400">
+                            <ShieldCheck size={12} />
+                            <span className="text-[9px] font-bold uppercase tracking-wider">Anonymized</span>
+                        </div>
+                    </div>
+                    <div ref={chatScrollRef} className="flex-grow overflow-y-auto p-4 space-y-4 bg-slate-50 dark:bg-slate-950 scroll-smooth">
+                        {chatMessages.length === 0 && (
+                            <div className="h-full flex flex-col items-center justify-center text-center opacity-30 px-6">
+                                <Stethoscope size={32} className="text-emerald-600 mb-3" />
+                                <p className="text-slate-800 dark:text-slate-200 font-black text-[10px] uppercase tracking-widest">Logic Query</p>
+                                <p className="text-slate-500 dark:text-slate-400 text-[9px] mt-1 font-medium">Ask about institutional logic or drug doses.</p>
+                            </div>
+                        )}
+                        {chatMessages.map((msg, i) => (
+                            <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
+                                <div
+                                    className={`max-w-[90%] p-3 rounded-2xl shadow-sm text-[11px] ${
+                                        msg.role === 'user'
+                                            ? 'text-white rounded-tr-none font-bold'
+                                            : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 rounded-tl-none border border-slate-100 dark:border-slate-800'
+                                    }`}
+                                    style={msg.role === 'user' ? { background: book.accentColor } : {}}
+                                >
+                                    {msg.role === 'ai' ? <FormattedClinicalData text={msg.text} /> : msg.text}
                                 </div>
-
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 px-1">
-                                    {filteredArticles.map(article => (
-                                        <button
-                                            key={article.id}
-                                            onClick={() => setSelectedArticle(article)}
-                                            className="glass-card p-4 rounded-2xl hover:shadow-md transition-all text-left flex items-start gap-4 group"
-                                        >
-                                            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-50 dark:bg-slate-800 rounded-xl flex items-center justify-center text-slate-400 group-hover:bg-[#0f766e] group-hover:text-white transition-all shrink-0">
-                                                <ArticleIcon icon={article.icon} size={18} />
-                                            </div>
-                                            <div className="flex-grow min-w-0">
-                                                <span className="text-[7px] font-black uppercase tracking-widest text-[#0f766e] dark:text-emerald-400 mb-0.5 block">
-                                                    {article.id} • {article.category}
-                                                </span>
-                                                <h3 className="font-black text-slate-900 dark:text-white text-xs sm:text-sm leading-tight group-hover:text-[#0f766e] transition-colors truncate">
-                                                    {article.title}
-                                                </h3>
-                                                <p className="text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400 mt-1 line-clamp-2 leading-relaxed font-medium">
-                                                    {article.summary}
-                                                </p>
-                                            </div>
-                                        </button>
-                                    ))}
+                            </div>
+                        ))}
+                        {loadingChat && (
+                            <div className="flex justify-start">
+                                <div className="bg-white dark:bg-slate-900 px-4 py-2.5 rounded-2xl rounded-tl-none shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col gap-2">
+                                    <div className="flex gap-1 items-center">
+                                        <Loader2 size={12} className="animate-spin text-emerald-500" />
+                                        <span className="text-[7px] font-black text-emerald-500 uppercase tracking-widest animate-pulse">Syncing Logic...</span>
+                                    </div>
                                 </div>
                             </div>
                         )}
                     </div>
-                )}
-
-                {/* Article Detail */}
-                {selectedArticle && (
-                    <div className="glass-card rounded-[2rem] overflow-hidden shadow-xl animate-slide-up transition-colors">
-                        <div className="px-6 pt-6 pb-4 flex items-center">
-                            <button
-                                onClick={() => setSelectedArticle(null)}
-                                className="text-[#0f766e] dark:text-emerald-400 font-black text-[9px] uppercase tracking-widest flex items-center gap-2 hover:opacity-70 transition-opacity"
-                            >
-                                <ArrowLeft size={12} /> Back to Index
-                            </button>
-                        </div>
-
-                        <div className="px-6 sm:px-10 pb-12 space-y-6">
-                            <div className="space-y-2">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-8 h-8 bg-emerald-600 text-white rounded-xl flex items-center justify-center shadow-lg shadow-emerald-600/20">
-                                        <ArticleIcon icon={selectedArticle.icon} size={14} />
-                                    </div>
-                                    <span className="font-black text-emerald-600 dark:text-emerald-400 text-[8px] uppercase tracking-widest">
-                                        {selectedArticle.id} • {selectedArticle.category}
-                                    </span>
-                                </div>
-                                <h2 className="text-xl sm:text-3xl font-black text-slate-900 dark:text-white leading-tight tracking-tight">
-                                    {selectedArticle.title}
-                                </h2>
-                            </div>
-
-                            <div className="p-4 bg-slate-50 dark:bg-slate-950/40 rounded-2xl border-l-4 border-emerald-600 text-slate-600 dark:text-slate-400 text-[10px] sm:text-xs italic font-medium leading-relaxed">
-                                {selectedArticle.summary}
-                            </div>
-
-                            <div className="prose prose-slate dark:prose-invert max-w-none">
-                                <FormattedClinicalData text={selectedArticle.content} />
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Diagnostic Assistant Chat */}
-                {!selectedArticle && !isSearchActive && (
-                    <div className="glass-card rounded-[1.5rem] shadow-xl overflow-hidden flex flex-col h-[380px] transition-all">
-                        {/* Chat Header */}
-                        <div className="bg-slate-900 dark:bg-slate-950 p-4 text-white flex items-center justify-between shrink-0">
-                            <div className="flex items-center gap-3">
-                                <div
-                                    className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
-                                        loadingChat
-                                            ? 'bg-emerald-500 shadow-lg shadow-emerald-500/50 scale-105'
-                                            : 'bg-[#0f766e]'
-                                    }`}
-                                >
-                                    <Stethoscope size={14} className={loadingChat ? 'animate-pulse' : ''} />
-                                </div>
-                                <div>
-                                    <p className="font-black text-[10px] uppercase tracking-tight leading-none">
-                                        Diagnostic Assistant
-                                    </p>
-                                    <div className="flex items-center gap-1.5 mt-1 leading-none">
-                                        <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse-soft" />
-                                        <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest">
-                                            Logic Live
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-1 text-xs text-emerald-400">
-                                <ShieldCheck size={12} />
-                                <span className="text-[9px] font-bold uppercase tracking-wider">Anonymized</span>
-                            </div>
-                        </div>
-
-                        {/* Messages */}
-                        <div
-                            ref={chatScrollRef}
-                            className="flex-grow overflow-y-auto p-4 space-y-4 bg-slate-50 dark:bg-slate-950 scroll-smooth"
+                    <div className="p-3 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex gap-2 shrink-0">
+                        <input
+                            type="text"
+                            value={chatInput}
+                            onChange={e => setChatInput(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
+                            placeholder="Query clinical library..."
+                            disabled={loadingChat}
+                            className="flex-grow bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl px-4 py-2.5 text-[11px] font-bold focus:ring-1 focus:ring-emerald-500 outline-none transition-all dark:text-white shadow-inner"
+                        />
+                        <button
+                            onClick={handleSendMessage}
+                            disabled={!chatInput.trim() || loadingChat}
+                            className="w-10 h-10 text-white rounded-xl flex items-center justify-center disabled:opacity-50 shadow-xl active:scale-95 shrink-0 transition-all"
+                            style={{ background: book.accentColor }}
                         >
-                            {chatMessages.length === 0 && (
-                                <div className="h-full flex flex-col items-center justify-center text-center opacity-30 px-6">
-                                    <Stethoscope size={32} className="text-emerald-600 mb-3" />
-                                    <p className="text-slate-800 dark:text-slate-200 font-black text-[10px] uppercase tracking-widest">
-                                        Logic Query
-                                    </p>
-                                    <p className="text-slate-500 dark:text-slate-400 text-[9px] mt-1 font-medium">
-                                        Ask about institutional logic or drug doses.
-                                    </p>
-                                </div>
-                            )}
-                            {chatMessages.map((msg, i) => (
-                                <div
-                                    key={i}
-                                    className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}
-                                >
-                                    <div
-                                        className={`max-w-[90%] p-3 rounded-2xl shadow-sm text-[11px] ${
-                                            msg.role === 'user'
-                                                ? 'bg-[#0f766e] text-white rounded-tr-none font-bold'
-                                                : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 rounded-tl-none border border-slate-100 dark:border-slate-800'
-                                        }`}
-                                    >
-                                        {msg.role === 'ai' ? (
-                                            <FormattedClinicalData text={msg.text} />
-                                        ) : (
-                                            msg.text
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
-                            {loadingChat && (
-                                <div className="flex justify-start">
-                                    <div className="bg-white dark:bg-slate-900 px-4 py-2.5 rounded-2xl rounded-tl-none shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col gap-2">
-                                        <div className="flex gap-1 items-center">
-                                            <Loader2 size={12} className="animate-spin text-emerald-500" />
-                                            <span className="text-[7px] font-black text-emerald-500 uppercase tracking-widest animate-pulse">
-                                                Syncing Logic...
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
+                            <Send size={14} />
+                        </button>
+                    </div>
+                </div>
+            )}
 
-                        {/* Input */}
-                        <div className="p-3 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex gap-2 shrink-0">
-                            <input
-                                type="text"
-                                value={chatInput}
-                                onChange={e => setChatInput(e.target.value)}
-                                onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
-                                placeholder="Query clinical library..."
-                                disabled={loadingChat}
-                                className="flex-grow bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl px-4 py-2.5 text-[11px] font-bold focus:ring-1 focus:ring-emerald-500 outline-none transition-all dark:text-white shadow-inner"
-                            />
-                            <button
-                                onClick={handleSendMessage}
-                                disabled={!chatInput.trim() || loadingChat}
-                                className="w-10 h-10 bg-[#0f766e] text-white rounded-xl flex items-center justify-center disabled:opacity-50 hover:bg-[#0d6059] shadow-xl active:scale-95 shrink-0 transition-all"
-                            >
-                                <Send size={14} />
-                            </button>
+            {/* Footer */}
+            {!selectedArticle && (
+                <div className="mt-8 pt-8 border-t border-slate-200 dark:border-slate-800 px-1">
+                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">
+                        Resource Frameworks & References
+                    </h3>
+                    <div className="p-4 glass-card rounded-2xl flex gap-3 shadow-sm">
+                        <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center text-emerald-600 shrink-0">
+                            <BookOpen size={14} />
+                        </div>
+                        <div>
+                            <p className="text-[9px] font-black text-slate-800 dark:text-white uppercase tracking-tight">{book.reference}</p>
+                            <p className="text-[8px] text-slate-500 dark:text-slate-400 mt-1 font-medium leading-relaxed">
+                                This application is a digital reference guide for medical professionals. Always verify with the official source document and use clinical judgment.
+                            </p>
                         </div>
                     </div>
-                )}
+                    <p className="text-[8px] text-slate-400 mt-6 text-center font-bold uppercase tracking-widest italic opacity-50">
+                        PulseLogic Clinical Repository {book.version}
+                    </p>
+                </div>
+            )}
+        </div>
+    );
+}
 
-                {/* Footer Credits */}
-                {!selectedArticle && (
-                    <div className="mt-8 pt-8 border-t border-slate-200 dark:border-slate-800 px-1">
-                        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">
-                            Resource Frameworks & References
-                        </h3>
-                        <div className="p-4 glass-card rounded-2xl flex gap-3 shadow-sm">
-                            <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center text-emerald-600 shrink-0">
-                                <BookOpen size={14} />
+// ─── Main Library Hub Page ────────────────────────────────────────────────────
+
+export default function HealthEducationPage() {
+    const router = useRouter();
+    const [activeBook, setActiveBook] = useState<LibraryBook | null>(null);
+
+    if (activeBook) {
+        return (
+            <div className="min-h-screen bg-background">
+                <div className="max-w-3xl mx-auto px-4 pb-24 space-y-4 sm:space-y-6">
+                    <BookViewer book={activeBook} onBack={() => setActiveBook(null)} />
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="min-h-screen bg-background">
+            <div className="max-w-3xl mx-auto px-4 pb-24 space-y-6 sm:space-y-8 animate-fade-in">
+
+                {/* Hero Header */}
+                <div className="bg-gradient-to-br from-slate-900 to-slate-800 dark:from-slate-950 dark:to-slate-900 rounded-b-none sm:rounded-b-[2rem] -mx-4 px-6 pt-6 pb-8 text-white shadow-xl relative overflow-hidden">
+                    <div className="absolute inset-0 opacity-5">
+                        <div className="absolute -top-10 -right-10 w-60 h-60 bg-emerald-400 rounded-full blur-3xl" />
+                        <div className="absolute bottom-0 left-1/4 w-40 h-40 bg-teal-400 rounded-full blur-3xl" />
+                    </div>
+                    <div className="relative z-10 space-y-3">
+                        <button
+                            onClick={() => router.back()}
+                            className="text-[10px] font-black uppercase tracking-widest text-white/50 hover:text-white transition-colors flex items-center gap-2"
+                        >
+                            <ArrowLeft size={14} /> Back
+                        </button>
+                        <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-2xl bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center">
+                                <Library size={24} className="text-emerald-400" />
                             </div>
                             <div>
-                                <p className="text-[9px] font-black text-slate-800 dark:text-white uppercase tracking-tight">
-                                    Institutional Reference: AIIMS Antibiotic Policy
-                                </p>
-                                <p className="text-[8px] text-slate-500 dark:text-slate-400 mt-1 font-medium leading-relaxed">
-                                    This application is a digital reference guide for medical professionals. Always verify
-                                    with the official AIIMS New Delhi Antibiotic Policy document and use clinical
-                                    judgment.
-                                </p>
+                                <h1 className="text-xl sm:text-2xl font-black tracking-tight leading-none">Medical Library</h1>
+                                <p className="text-xs text-white/50 font-medium mt-0.5">Clinical literature & drug reference</p>
                             </div>
                         </div>
-                        <p className="text-[8px] text-slate-400 mt-6 text-center font-bold uppercase tracking-widest italic opacity-50">
-                            PulseLogic Clinical Repository v2.5.0
-                        </p>
                     </div>
-                )}
+                </div>
+
+                {/* Books Grid */}
+                <div className="px-1">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">
+                        Available References ({LIBRARY_BOOKS.filter(b => !b.comingSoon).length} active)
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {LIBRARY_BOOKS.map(book => {
+                            const Icon = book.icon;
+                            return (
+                                <button
+                                    key={book.id}
+                                    onClick={() => !book.comingSoon && setActiveBook(book)}
+                                    disabled={book.comingSoon}
+                                    className={`glass-card p-5 rounded-2xl text-left group relative overflow-hidden transition-all hover:shadow-xl hover:-translate-y-1 ${book.comingSoon ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
+                                >
+                                    {/* Gradient strip */}
+                                    <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${book.color} rounded-t-2xl`} />
+                                    <div className="flex items-start gap-4 mt-2">
+                                        <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${book.color} flex items-center justify-center text-white shadow-lg flex-shrink-0`}>
+                                            <Icon size={22} />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <h3 className="font-black text-slate-900 dark:text-white text-sm leading-tight">
+                                                    {book.title}
+                                                </h3>
+                                                {book.comingSoon && (
+                                                    <span className="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-400 rounded-full">
+                                                        Soon
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium leading-relaxed line-clamp-2">
+                                                {book.subtitle}
+                                            </p>
+                                            {!book.comingSoon && (
+                                                <p className="text-[9px] font-black uppercase tracking-widest mt-2" style={{ color: book.accentColor }}>
+                                                    {book.articles.length} Articles →
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </button>
+                            );
+                        })}
+
+                        {/* Add New Placeholder */}
+                        <div className="glass-card p-5 rounded-2xl text-left relative overflow-hidden border-2 border-dashed border-slate-200 dark:border-slate-700 opacity-50">
+                            <div className="flex items-center gap-4 mt-2">
+                                <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 flex-shrink-0">
+                                    <PlusCircle size={22} />
+                                </div>
+                                <div>
+                                    <h3 className="font-black text-slate-500 dark:text-slate-400 text-sm">Add New Literature</h3>
+                                    <p className="text-[10px] text-slate-400 font-medium mt-1">Upload or link a new medical reference book</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     );
