@@ -148,7 +148,7 @@ export default function ECGPage() {
             />
 
             <main className="flex-1 w-full">
-                <div className="container-app space-y-6 pb-8 max-w-4xl animate-fade-in">
+                <div className="container-app space-y-6 pb-24 lg:pb-8 max-w-4xl animate-fade-in">
                     {/* Upload Section */}
                     <motion.div
                         initial={{ opacity: 0, y: 12 }}

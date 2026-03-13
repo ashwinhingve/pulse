@@ -139,7 +139,7 @@ export default function ReportsPage() {
             />
 
             <main className="flex-1 w-full">
-                <div className="container-app space-y-4 pb-8 max-w-7xl animate-fade-in">
+                <div className="container-app space-y-4 pb-24 lg:pb-8 max-w-7xl animate-fade-in">
                     {error && <ErrorBanner message={error} onDismiss={() => setError('')} />}
 
                     <SearchBar value={search} onChange={setSearch} placeholder="Search reports..." />
