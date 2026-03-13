@@ -7,7 +7,7 @@
    always have enough space at the bottom. */
 @media (max-width: 1023px) {
   .main-scroll-content {
-    padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
   }
 
   /* Landing page mobile colored header area */

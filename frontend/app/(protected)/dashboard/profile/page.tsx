@@ -104,7 +104,7 @@ export default function ProfilePage() {
             />
 
             <main className="flex-1 w-full">
-                <div className="container-app py-6 space-y-6 animate-fade-in">
+                <div className="container-app pt-6 pb-24 lg:pb-6 space-y-6 animate-fade-in">
                 {/* Profile Header Card */}
                 <div className="glass-card p-6 overflow-hidden relative">
                     {/* Background gradient */}
