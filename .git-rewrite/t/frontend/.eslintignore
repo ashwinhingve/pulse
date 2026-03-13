@@ -1,0 +1,13 @@
+# Android/iOS build outputs — never lint these
+android/
+ios/
+
+# Next.js build output
+.next/
+out/
+
+# Node modules
+node_modules/
+
+# Tauri
+src-tauri/target/
