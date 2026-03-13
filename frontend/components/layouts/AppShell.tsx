@@ -8,7 +8,7 @@ import {
     MessageSquare, Bot, BookOpen, Shield, LogOut,
     ChevronLeft, ChevronRight, X, Lock,
     Users, Stethoscope, ClipboardList, Menu,
-    HeartPulse,
+    HeartPulse, FolderSearch,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import {
@@ -56,6 +56,7 @@ const NAV_ITEMS: NavItem[] = [
     { href: '/dashboard/patients', label: 'Patients', icon: Users, roles: [UserRole.ARMY_MEDICAL_OFFICER, UserRole.PUBLIC_MEDICAL_OFFICIAL, UserRole.ADMIN], section: 'Clinical' },
     { href: '/dashboard/doctors', label: 'Doctors', icon: Stethoscope, roles: [UserRole.ARMY_MEDICAL_OFFICER, UserRole.PUBLIC_MEDICAL_OFFICIAL, UserRole.ADMIN], section: 'Clinical' },
     { href: '/dashboard/reports', label: 'Reports', icon: ClipboardList, roles: [UserRole.ARMY_MEDICAL_OFFICER, UserRole.PUBLIC_MEDICAL_OFFICIAL, UserRole.ADMIN], section: 'Clinical' },
+    { href: '/dashboard/documents', label: 'Documents & AI', icon: FolderSearch, roles: [UserRole.ARMY_MEDICAL_OFFICER, UserRole.PUBLIC_MEDICAL_OFFICIAL, UserRole.ADMIN], section: 'Clinical' },
     { href: '/dashboard/diagnoses', label: 'Diagnoses', icon: ClipboardList, roles: [UserRole.ARMY_MEDICAL_OFFICER, UserRole.PUBLIC_MEDICAL_OFFICIAL, UserRole.ADMIN], section: 'Clinical' },
     { href: '/dashboard/ecg', label: 'ECG Analysis', icon: Activity, roles: [UserRole.ARMY_MEDICAL_OFFICER], section: 'Clinical' },
     { href: '/dashboard/chat', label: 'Secure Chat', icon: MessageSquare, roles: [UserRole.ARMY_MEDICAL_OFFICER, UserRole.PUBLIC_MEDICAL_OFFICIAL, UserRole.ADMIN], section: 'Tools' },
@@ -371,7 +372,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 const ARMY_TABS = [
     { href: '/dashboard', label: 'Home', icon: LayoutDashboard },
     { href: '/dashboard/patients', label: 'Patients', icon: Users },
-    { href: '/dashboard/reports', label: 'Reports', icon: ClipboardList },
+    { href: '/dashboard/documents', label: 'Docs', icon: FolderSearch },
     { href: '/dashboard/chat', label: 'Chat', icon: MessageSquare },
     { href: '/dashboard/assistant', label: 'AI', icon: Bot },
 ];
@@ -379,7 +380,7 @@ const ARMY_TABS = [
 const PUBLIC_TABS = [
     { href: '/dashboard', label: 'Home', icon: LayoutDashboard },
     { href: '/dashboard/patients', label: 'Patients', icon: Users },
-    { href: '/dashboard/reports', label: 'Reports', icon: ClipboardList },
+    { href: '/dashboard/documents', label: 'Docs', icon: FolderSearch },
     { href: '/dashboard/chat', label: 'Chat', icon: MessageSquare },
     { href: '/dashboard/assistant', label: 'AI', icon: Bot },
 ];
@@ -387,7 +388,7 @@ const PUBLIC_TABS = [
 const ADMIN_TABS = [
     { href: '/dashboard', label: 'Home', icon: LayoutDashboard },
     { href: '/dashboard/patients', label: 'Patients', icon: Users },
-    { href: '/dashboard/reports', label: 'Reports', icon: ClipboardList },
+    { href: '/dashboard/documents', label: 'Docs', icon: FolderSearch },
     { href: '/dashboard/assistant', label: 'AI', icon: Bot },
     { href: '/admin', label: 'Admin', icon: Shield },
 ];

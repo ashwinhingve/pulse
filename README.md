@@ -75,12 +75,15 @@ pulse/
 | Docker | Latest |
 | npm | 10+ |
 
-### Backend
+###
+```bash
+docker-compose up -d           # start PostgreSQL + Redis
+```
 
+### Backend
 ```bash
 cd backend
 cp .env.example .env          # fill in secrets
-docker-compose up -d           # start PostgreSQL + Redis
 npm install
 npm run start:dev
 ```
@@ -184,6 +187,7 @@ set JAVA_HOME=C:\Program Files\Microsoft\jdk-21.0.7.6-hotspot
 set PATH=%JAVA_HOME%\bin;%PATH%
 
 gradlew.bat assembleRelease
+.\gradlew.bat assembleRelease
 ```
 
 **Output:** `android/app/build/outputs/apk/release/app-release.apk`

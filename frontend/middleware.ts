@@ -56,8 +56,8 @@ export async function middleware(request: NextRequest) {
 
 // Middleware is NOT used in mobile/desktop static export builds
 // Mobile auth uses direct API calls via lib/mobile-auth.ts
+// NOTE: config.matcher must be a static value — no dynamic expressions.
+// The MOBILE_BUILD check is handled inside the middleware function body above.
 export const config = {
-    matcher: process.env.MOBILE_BUILD === 'true'
-        ? []  // Empty = middleware disabled for static export
-        : ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
+    matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
 };

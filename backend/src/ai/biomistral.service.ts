@@ -8,6 +8,9 @@ interface BioMistralResponse {
     provider: 'huggingface';
 }
 
+// Vision model used for medical image analysis
+const VISION_MODEL_ID = 'meta-llama/Llama-3.2-11B-Vision-Instruct';
+
 @Injectable()
 export class BioMistralService implements OnModuleInit {
     private readonly logger = new Logger(BioMistralService.name);
@@ -94,6 +97,61 @@ export class BioMistralService implements OnModuleInit {
 
     getProvider(): string {
         return this.isReady ? `huggingface (${this.hfModelId})` : 'guidelines-only';
+    }
+
+    /**
+     * Generate a response with an embedded image (multimodal / vision).
+     * Uses a separate vision-capable model from the standard text model.
+     * @param imageDataUrl  base64 data URL: "data:<mime>;base64,<data>"
+     * @param prompt        User instruction / question about the image
+     * @param systemPrompt  Optional system context
+     */
+    async generateWithImage(
+        imageDataUrl: string,
+        prompt: string,
+        systemPrompt?: string,
+    ): Promise<BioMistralResponse> {
+        const visionModel =
+            this.configService.get<string>('VISION_MODEL_ID') || VISION_MODEL_ID;
+
+        const apiKey = this.configService.get<string>('BIOMISTRAL_HF_API_KEY', '');
+        if (!apiKey) {
+            this.logger.warn('No HuggingFace API key set – vision analysis unavailable');
+            return { text: '', model: visionModel, provider: 'huggingface' };
+        }
+
+        const messages: Array<{
+            role: 'system' | 'user';
+            content: string | Array<{ type: string; [key: string]: unknown }>;
+        }> = [];
+
+        if (systemPrompt) {
+            messages.push({ role: 'system', content: systemPrompt });
+        }
+
+        messages.push({
+            role: 'user',
+            content: [
+                { type: 'image_url', image_url: { url: imageDataUrl } },
+                { type: 'text', text: prompt },
+            ],
+        });
+
+        try {
+            const response = await this.hfClient.chatCompletion({
+                model: visionModel,
+                messages: messages as any,
+                max_tokens: 1500,
+                temperature: 0.25,
+                top_p: 0.9,
+            });
+
+            const text = (response.choices?.[0]?.message?.content as string) || '';
+            return { text: text.trim(), model: visionModel, provider: 'huggingface' };
+        } catch (error: any) {
+            this.logger.error(`Vision model (${visionModel}) failed: ${error?.message || error}`);
+            throw error;
+        }
     }
 
     async generate(
