@@ -1,7 +1,115 @@
 # PulseLogic — Secure Military Medical Decision Support
-hi
+
 A secure, multi-platform medical decision-support system with role-based access control,
 clearance-level gating, AI-powered diagnostics, and offline-capable mobile/desktop clients.
+
+---
+
+## Team Workflow (Read This First)
+
+> **Team Leader:** All contributors must follow this workflow without exception.
+> This keeps the codebase clean and prevents conflicts.
+
+### Step 1 — Always Pull Before You Start
+
+Never start working on stale code. Pull the latest changes from GitHub first.
+
+```bash
+git checkout main
+git pull origin main
+```
+
+If you are working on a feature, create a branch off main:
+
+```bash
+git checkout -b feature/your-feature-name
+```
+
+### Step 2 — Set Up Your Environment
+
+**Backend:**
+```bash
+cd backend
+cp .env.example .env        # fill in secrets (ask team lead for values)
+npm install
+```
+
+**Frontend:**
+```bash
+cd frontend
+cp env/dev.env .env.local
+npm install
+```
+
+### Step 3 — Start Working
+
+Run the services locally while you develop:
+
+```bash
+# Terminal 1 — Start database
+docker-compose up -d
+
+# Terminal 2 — Backend (auto-reloads on save)
+cd backend
+npm run start:dev
+
+# Terminal 3 — Frontend (auto-reloads on save)
+cd frontend
+npm run dev
+```
+
+- Frontend: `http://localhost:3000`
+- Backend API: `http://localhost:3001`
+
+### Step 4 — Build Before Committing
+
+Always verify the build passes before pushing. A broken build blocks everyone.
+
+**Frontend:**
+```bash
+cd frontend
+npm run build
+```
+
+**Backend:**
+```bash
+cd backend
+npm run build
+```
+
+Fix any build errors before moving to the next step.
+
+### Step 5 — Commit and Push
+
+Stage only the files you intentionally changed. Never use `git add .` blindly.
+
+```bash
+git add frontend/app/...          # add specific files
+git add backend/src/...
+
+git commit -m "feat: short description of what you did"
+git push origin feature/your-feature-name
+```
+
+Then open a Pull Request on GitHub and request a review from the team lead.
+
+### Commit Message Convention
+
+| Prefix | When to use |
+|--------|-------------|
+| `feat:` | New feature |
+| `fix:` | Bug fix |
+| `chore:` | Config, deps, tooling |
+| `refactor:` | Code restructure (no behaviour change) |
+| `docs:` | Documentation only |
+
+### Rules
+
+- Never push directly to `main` — always use a branch + PR
+- Never commit `.env` files or secrets
+- Always pull before starting work
+- Build must pass before pushing
+- Get PR approval before merging
 
 ---
 
@@ -44,6 +152,7 @@ pulse/
 │   │   ├── patients/           # Patient management
 │   │   ├── doctors/            # Doctor profiles
 │   │   ├── reports/            # Report generation
+│   │   ├── documents/          # Encrypted document storage + AI analysis
 │   │   └── symptoms/           # Symptom tracking
 │   └── railway.json
 ├── frontend/                   # Next.js 14 + Capacitor + Tauri
@@ -65,53 +174,13 @@ pulse/
 
 ---
 
-## Local Development
-
-### Prerequisites
+## Prerequisites
 
 | Tool | Version |
 |------|---------|
 | Node.js | 20+ |
-| Docker | Latest |
 | npm | 10+ |
-
-###
-<<<<<<< HEAD
-```bash
-docker-compose up -d           # start PostgreSQL + Redis
-```
-=======
-```
-docker-compose up -d  # start PostgreSQL + Redis
- ``` 
-
-### Backend
->>>>>>> 08d69f4dbd286e3af514a4cddf5c902cbea521f0
-
-### Backend
-```bash
-cd backend
-<<<<<<< HEAD
-cp .env.example .env          # fill in secrets
-=======
-cp .env.example .env          # fill in secrets        
->>>>>>> 08d69f4dbd286e3af514a4cddf5c902cbea521f0
-npm install
-npm run start:dev
-```
-
-API available at `http://localhost:3001`
-
-### Frontend (web)
-
-```bash
-cd frontend
-cp env/dev.env .env.local
-npm install
-npm run dev
-```
-
-App available at `http://localhost:3000`
+| Docker | Latest |
 
 ---
 
@@ -121,7 +190,7 @@ App available at `http://localhost:3000`
 
 | Platform | Required Tools |
 |----------|---------------|
-| Android | Node 20+, **Java 21**, Android SDK (API 36) |
+| Android | Node 20+, Java 21, Android SDK (API 36) |
 | Desktop (Windows) | Node 20+, Rust 1.70+, VS Build Tools 2022 |
 | Desktop (macOS) | Node 20+, Rust 1.70+, Xcode 14+ |
 | iOS | macOS only, Xcode 14+, CocoaPods |
@@ -132,22 +201,17 @@ App available at `http://localhost:3000`
 
 ### Step 1 — Install Java 21
 
-Capacitor 8.x requires **Java 21** (hardcoded in the library).
+Capacitor 8.x requires **Java 21**.
 
 **Windows (PowerShell as Admin):**
 ```powershell
 winget install Microsoft.OpenJDK.21
 ```
-gfhgfht htrh t
+
 Verify:
 ```cmd
 java -version
 # Should show: openjdk version "21..."
-```
-
-If `winget` installs to a different path, find it with:
-```cmd
-dir "C:\Program Files\Microsoft\" | findstr jdk
 ```
 
 ### Step 2 — Install Android SDK
@@ -171,17 +235,10 @@ The keystore is at `frontend/android/keystore/pulselogic-release.jks`.
 
 ```cmd
 cd frontend
-
-:: Copy mobile environment
 copy .env.mobile .env.local
-
-:: Build Next.js static export
 set MOBILE_BUILD=true
 npx next build
 ```
-
-> **Fix applied:** `generateStaticParams` must return at least one entry in Next.js 14.1
-> (an empty array is treated as "missing" by the build checker).
 
 ### Step 5 — Sync to Android
 
@@ -193,13 +250,9 @@ npx cap sync android
 
 ```cmd
 cd android
-
-:: Set Java 21 (adjust path to match your installation)
 set JAVA_HOME=C:\Program Files\Microsoft\jdk-21.0.7.6-hotspot
 set PATH=%JAVA_HOME%\bin;%PATH%
-
 gradlew.bat assembleRelease
-.\gradlew.bat assembleRelease
 ```
 
 **Output:** `android/app/build/outputs/apk/release/app-release.apk`
@@ -212,26 +265,14 @@ gradlew.bat bundleRelease
 
 **Output:** `android/app/build/outputs/bundle/release/app-release.aab`
 
-### Gradle Toolchain Auto-Download
-
-`android/settings.gradle` includes the **Foojay Toolchain Resolver**.
-If Gradle cannot find JDK 21 locally, it will download it automatically
-(requires internet on first run). Controlled by:
-
-```properties
-# android/gradle.properties
-org.gradle.toolchain.download.enabled=true
-org.gradle.java.installations.auto-download=true
-```
-
 ### Android Troubleshooting
 
 | Error | Fix |
 |-------|-----|
 | `invalid source release: 21` | Install JDK 21; Capacitor 8 requires it |
 | `ANDROID_HOME not set` | Add SDK path to system environment |
-| `generateStaticParams missing` | Return `[{ id: 'index' }]` not `[]` — fixed in codebase |
-| `pages-manifest.json not found` | `pages/404.tsx` now exists to force manifest generation |
+| `generateStaticParams missing` | Return `[{ id: 'index' }]` not `[]` |
+| `pages-manifest.json not found` | `pages/404.tsx` exists to force manifest generation |
 | Cleartext HTTP blocked | Check `network_security_config.xml` |
 | Gradle sync fails | Run `npx cap sync android` then retry |
 
@@ -244,7 +285,6 @@ org.gradle.java.installations.auto-download=true
 **Windows:**
 ```powershell
 winget install Rustlang.Rustup
-# Or download from https://rustup.rs
 ```
 
 Install VS Build Tools 2022 with "Desktop development with C++" workload.
@@ -255,31 +295,18 @@ xcode-select --install
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 
-Verify:
-```bash
-rustc --version   # 1.70+
-cargo --version
-```
-
 ### Step 2 — Generate App Icons
 
 ```bash
 cd frontend
-# Uses public/icon.svg as source (512x512 shield + pulse logo)
 npx @tauri-apps/cli icon public/icon.svg
 ```
-
-This generates all required sizes in `src-tauri/icons/`.
 
 ### Step 3 — Build Desktop App
 
 ```bash
 cd frontend
-
-# Copy desktop environment
-cp .env.desktop .env.local    # Windows: copy .env.desktop .env.local 
-
-# Build (produces native installer for current platform)
+cp .env.desktop .env.local    # Windows: copy .env.desktop .env.local
 npx tauri build
 ```
 
@@ -299,25 +326,7 @@ src-tauri/target/release/bundle/dmg/PulseLogic_1.0.0_aarch64.dmg
 ```bash
 cd frontend
 npx tauri dev
-# Opens native window with hot-reload pointing to localhost:3000
 ```
-
-### Desktop Tauri Architecture
-
-```
-src-tauri/
-├── Cargo.toml          # Rust dependencies (tauri 2, plugins)
-├── tauri.conf.json     # Window config, CSP, bundle settings
-├── build.rs            # Build script
-├── icons/              # App icons (generated by tauri icon)
-└── src/
-    └── main.rs         # Entry point + get_app_version command
-```
-
-**Security settings in `tauri.conf.json`:**
-- `contentProtected: true` — prevents screenshots
-- CSP restricts connections to known backend URLs only
-- DevTools open only in debug builds (`#[cfg(debug_assertions)]`)
 
 ### Desktop Troubleshooting
 
@@ -334,61 +343,19 @@ src-tauri/
 ## iOS Build
 
 > **Requires macOS with Xcode 15+.** Cannot be built on Windows or Linux.
-> Full guide: [`docs/SETUP_IOS.md`](docs/SETUP_IOS.md)
-> CI workflow: [`.github/workflows/ios-build.yml`](.github/workflows/ios-build.yml)
-
-### Step 1 — Add iOS Platform
 
 ```bash
 cd frontend
 npx cap add ios
-```
-
-### Step 2 — Install CocoaPods Dependencies
-
-```bash
-cd ios/App
-pod install
-```
-
-### Step 3 — Build Frontend
-
-```bash
-cd frontend
+cd ios/App && pod install
+cd ../..
 cp .env.mobile .env.local
 MOBILE_BUILD=true npx next build
 npx cap sync ios
-```
-
-### Step 4 — Open in Xcode
-
-```bash
 npx cap open ios
 ```
 
-In Xcode:
-1. Select your signing team (requires Apple Developer account)
-2. Set bundle ID: `com.military.pulselogic`
-3. Select target device or simulator
-4. Product → Build (⌘B) or Run (⌘R)
-
-### Step 5 — Archive for App Store / Ad Hoc
-
-1. Product → Archive
-2. Distribute App → choose method (App Store / Ad Hoc / Enterprise)
-3. Export `.ipa`
-
-### iOS Configuration (`capacitor.config.ts`)
-
-```typescript
-ios: {
-    contentInset: 'automatic',
-    backgroundColor: '#0f172a',
-    preferredContentMode: 'mobile',
-    allowsLinkPreview: false,
-    scrollEnabled: true,
-}
-```
+In Xcode: select signing team → set bundle ID `com.military.pulselogic` → Build (⌘B).
 
 ### iOS Troubleshooting
 
@@ -396,22 +363,14 @@ ios: {
 |-------|-----|
 | `pod install` fails | `sudo gem install cocoapods` then retry |
 | Signing error | Set team in Xcode → Signing & Capabilities |
-| App Transport Security | Check `Info.plist` ATS config |
 | White screen | Check API URL is HTTPS in `.env.mobile` |
 
 ---
 
 ## Version Management
 
-All platform versions sync from a single script:
-
 ```bash
 cd frontend
-
-# Preview (no changes)
-node scripts/bump-version.js patch --dry-run
-
-# Apply
 node scripts/bump-version.js patch    # 1.0.0 → 1.0.1
 node scripts/bump-version.js minor    # 1.0.0 → 1.1.0
 node scripts/bump-version.js major    # 1.0.0 → 2.0.0
@@ -433,11 +392,8 @@ Pushing a `v*` tag triggers automated builds:
 ### Release Workflow
 
 ```bash
-# 1. Bump version
 cd frontend
 node scripts/bump-version.js patch
-
-# 2. Commit and tag
 git add -A
 git commit -m "chore: bump version to v1.0.1"
 git tag v1.0.1
@@ -454,15 +410,6 @@ git push origin main --tags
 | `ANDROID_KEY_PASSWORD` | Key password |
 | `TAURI_SIGNING_PRIVATE_KEY` | Tauri updater signing key |
 | `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | Key password |
-
-Encode keystore for CI:
-```bash
-# macOS/Linux
-base64 -i android/keystore/pulselogic-release.jks | pbcopy
-
-# Windows
-certutil -encode android\keystore\pulselogic-release.jks encoded.txt
-```
 
 ---
 
@@ -509,6 +456,16 @@ NEXTAUTH_SECRET=<random-32-char-string>
 | PATCH | `/api/medical/cases/:id` | Bearer | Update case |
 | POST | `/api/medical/cases/:id/close` | Bearer | Close case |
 
+### Documents
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/api/documents/upload` | Bearer | Upload document (50MB max) |
+| GET | `/api/documents` | Bearer | List documents |
+| GET | `/api/documents/:id` | Bearer | Document detail |
+| GET | `/api/documents/:id/file` | Bearer | Download decrypted file |
+| POST | `/api/documents/:id/analyze` | Bearer | Run AI analysis |
+| DELETE | `/api/documents/:id` | Bearer | Delete document |
+
 ### AI Services
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
@@ -537,8 +494,8 @@ NEXTAUTH_SECRET=<random-32-char-string>
 | Database | PostgreSQL (TypeORM) |
 | Auth | JWT + bcrypt + speakeasy TOTP |
 | Real-time | Socket.io WebSockets |
-| AI | Google Gemini + BioMistral |
-| Frontend | Next.js 14 (App Router, Static Export) |
+| AI | Google Gemini + BioMistral + Llama Vision |
+| Frontend | Next.js 14 (App Router) |
 | Mobile | Capacitor 8 (Android + iOS) |
 | Desktop | Tauri 2 (Windows + macOS + Linux) |
 | Styling | Tailwind CSS |
@@ -552,14 +509,10 @@ NEXTAUTH_SECRET=<random-32-char-string>
 | Issue | Root Cause | Fix Applied |
 |-------|-----------|-------------|
 | `generateStaticParams missing` for `cases/[id]` | Next.js 14.1 treats empty array as "missing" | Return `[{ id: 'index' }]` |
-| `pages-manifest.json not found` | Pure App Router skips Pages Router server compilation | Added `pages/404.tsx` to force manifest generation |
-| `useParams()` null | Next.js 14 strict null types | Added `params?.id ?? ''` guard |
-| `useSearchParams()` null | Same as above | Added `searchParams?.get()` guard |
-| `usePathname()` null | Same as above | Added `pathname ?? ''` guard |
-| `generateStaticParams` in `route.ts` | Invalid in route handlers; caused build confusion | Replaced with valid catch-all params |
-| Desktop app window blank / doesn't open | `output: 'export'` not activated for Tauri (needs `NEXT_PUBLIC_MOBILE_BUILD=true`) | `.env.desktop` sets flag; `next.config.js` checks both `MOBILE_BUILD` and `NEXT_PUBLIC_MOBILE_BUILD` |
-| `useSession must be wrapped in SessionProvider` crash on mobile | `SessionProvider` was skipped for mobile builds | `providers.tsx` now always includes `SessionProvider` with `session=null` + no refetch |
-| ECG analyze fails with CORS error | `api.ts` uses `withCredentials: true`; Capacitor origin blocked | ECG page uses `fetch()` with explicit `Authorization` header instead of axios |
+| `pages-manifest.json not found` | Pure App Router skips Pages Router compilation | Added `pages/404.tsx` |
+| `useSession must be wrapped in SessionProvider` crash on mobile | `SessionProvider` skipped for mobile builds | Always included with `session=null` |
+| Desktop app window blank | `output: 'export'` not activated for Tauri | `.env.desktop` sets `NEXT_PUBLIC_MOBILE_BUILD=true` |
+| ECG analyze fails with CORS error | axios `withCredentials` blocks Capacitor origin | ECG page uses `fetch()` with explicit `Authorization` header |
 
 ---
 
@@ -574,4 +527,3 @@ NEXTAUTH_SECRET=<random-32-char-string>
 ## License
 
 UNLICENSED — Proprietary software. All rights reserved.
-

@@ -1625,7 +1625,8 @@ export default function DocumentsPage() {
 
     useEffect(() => {
         fetchDocuments();
-        return () => pollTimers.current.forEach(t => clearInterval(t));
+        const timers = pollTimers.current;
+        return () => timers.forEach(t => clearInterval(t));
     }, [fetchDocuments]);
 
     const startPolling = useCallback((docId: string) => {

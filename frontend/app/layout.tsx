@@ -15,6 +15,7 @@ const manrope = Manrope({
 })
 
 export const metadata: Metadata = {
+    metadataBase: new URL(process.env.NEXTAUTH_URL || 'http://localhost:3000'),
     title: 'PulseLogic - Secure Military Medical Platform',
     description: 'Clinical decision support and communication for military doctors',
     robots: 'noindex, nofollow',

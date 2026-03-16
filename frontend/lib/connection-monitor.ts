@@ -145,6 +145,8 @@ export class WebSocketManager {
  */
 export function useWebSocket(url: string | null, onMessage?: (data: MessageEvent) => void) {
     const managerRef = useRef<WebSocketManager | null>(null);
+    const onMessageRef = useRef(onMessage);
+    onMessageRef.current = onMessage;
     const [isConnected, setIsConnected] = useState(false);
 
     useEffect(() => {
@@ -152,7 +154,7 @@ export function useWebSocket(url: string | null, onMessage?: (data: MessageEvent
 
         const manager = new WebSocketManager({
             url,
-            onMessage,
+            onMessage: (e) => onMessageRef.current?.(e),
             onOpen: () => setIsConnected(true),
             onClose: () => setIsConnected(false),
         });
