@@ -10,22 +10,29 @@ clearance-level gating, AI-powered diagnostics, and offline-capable mobile/deskt
 > **Team Leader:** All contributors must follow this workflow without exception.
 > This keeps the codebase clean and prevents conflicts.
 
-### Step 1 — Always Pull Before You Start
+### Branch Structure
 
-Never start working on stale code. Pull the latest changes from GitHub first.
+| Branch | Owner | Purpose |
+|--------|-------|---------|
+| `main` | Team Lead | Production-ready code. No direct pushes. |
+| `pl` | Team Member | Active development branch. All your work goes here. |
+| `master` | — | Legacy reference. Do not use. |
+
+---
+
+### For the Team Member (`pl` branch)
+
+#### Step 1 — Always Pull Before You Start
+
+Never start on stale code. Sync your branch with the latest from `main` first.
 
 ```bash
-git checkout main
-git pull origin main
+git checkout pl
+git pull origin pl          # get your own latest changes
+git pull origin main        # sync in any updates from team lead
 ```
 
-If you are working on a feature, create a branch off main:
-
-```bash
-git checkout -b feature/your-feature-name
-```
-
-### Step 2 — Set Up Your Environment
+#### Step 2 — Set Up Your Environment (first time only)
 
 **Backend:**
 ```bash
@@ -41,9 +48,9 @@ cp env/dev.env .env.local
 npm install
 ```
 
-### Step 3 — Start Working
+#### Step 3 — Start Working
 
-Run the services locally while you develop:
+Run services locally while you develop:
 
 ```bash
 # Terminal 1 — Start database
@@ -61,7 +68,7 @@ npm run dev
 - Frontend: `http://localhost:3000`
 - Backend API: `http://localhost:3001`
 
-### Step 4 — Build Before Committing
+#### Step 4 — Build Before Committing
 
 Always verify the build passes before pushing. A broken build blocks everyone.
 
@@ -77,21 +84,47 @@ cd backend
 npm run build
 ```
 
-Fix any build errors before moving to the next step.
+Fix any errors before moving on.
 
-### Step 5 — Commit and Push
+#### Step 5 — Commit and Push to `pl`
 
-Stage only the files you intentionally changed. Never use `git add .` blindly.
+Stage only the files you intentionally changed.
 
 ```bash
 git add frontend/app/...          # add specific files
 git add backend/src/...
 
+or 
+
+git add .           # If you're sure about the change.
+
 git commit -m "feat: short description of what you did"
-git push origin feature/your-feature-name
+git push origin pl
 ```
 
-Then open a Pull Request on GitHub and request a review from the team lead.
+When your work is ready to merge into `main`, notify the team lead to review and merge via Pull Request on GitHub.
+
+---
+
+### For the Team Lead (`main` branch)
+
+```bash
+# Review team member's work
+git fetch origin
+git checkout pl
+git pull origin pl
+
+# Test and build
+cd frontend && npm run build
+cd ../backend && npm run build
+
+# Merge into main after approval
+git checkout main
+git merge pl
+git push origin main
+```
+
+---
 
 ### Commit Message Convention
 
@@ -105,11 +138,11 @@ Then open a Pull Request on GitHub and request a review from the team lead.
 
 ### Rules
 
-- Never push directly to `main` — always use a branch + PR
+- `pl` branch: team member pushes here — never directly to `main`
+- Team lead reviews and merges `pl` → `main` via Pull Request
 - Never commit `.env` files or secrets
 - Always pull before starting work
 - Build must pass before pushing
-- Get PR approval before merging
 
 ---
 
