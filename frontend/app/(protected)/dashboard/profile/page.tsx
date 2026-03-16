@@ -36,6 +36,7 @@ export default function ProfilePage() {
     const router = useRouter();
     const { user, clearAuth } = useAuthStore();
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+    const [showCredits, setShowCredits] = useState(false);
     const [mobileUser, setMobileUser] = useState<any>(null);
 
     useEffect(() => {
@@ -337,12 +338,20 @@ export default function ProfilePage() {
                     <span className="font-medium">Sign Out</span>
                 </button>
 
-                {/* Version */}
-                <div className="text-center py-4">
+                {/* Version & Credits */}
+                <div className="text-center py-4 space-y-2">
+                    <button 
+                        onClick={() => setShowCredits(true)}
+                        className="text-xs font-semibold text-primary hover:underline"
+                    >
+                        About & Credits
+                    </button>
                     <p className="text-xs text-muted-foreground font-mono">
                         PulseLogic v1.0.0 MVP
                     </p>
                 </div>
+                {/* Mobile Bottom Spacer */}
+                <div className="h-[80px] lg:hidden w-full flex-shrink-0" aria-hidden="true" />
                 </div>
             </main>
 
@@ -367,6 +376,80 @@ export default function ProfilePage() {
                         className="flex-1 px-4 py-3 bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl font-medium transition-colors"
                     >
                         Sign Out
+                    </button>
+                </div>
+            </Modal>
+
+            {/* Credits & About Modal */}
+            <Modal open={showCredits} onClose={() => setShowCredits(false)} title="About PulseLogic" size="md">
+                <div className="space-y-6">
+                    <div className="flex flex-col items-center justify-center text-center space-y-2">
+                        <div className="w-16 h-16 bg-gradient-to-br from-medical-teal-500 to-medical-blue-600 rounded-2xl flex items-center justify-center shadow-lg mb-2">
+                           <Shield size={32} className="text-white" />
+                        </div>
+                        <h3 className="font-display font-bold text-xl text-foreground">PulseLogic</h3>
+                        <p className="text-sm text-muted-foreground">Secure Military Medical Platform</p>
+                    </div>
+                    
+                    <div className="bg-muted/30 p-4 rounded-xl text-sm border border-border max-h-[50vh] overflow-y-auto scrollbar-thin">
+                        <div className="space-y-6">
+                            {/* Developers Section */}
+                            <div>
+                                <h4 className="font-semibold text-foreground mb-3 border-b border-border pb-2 text-primary">Developers</h4>
+                                <div className="space-y-4">
+                                    <div className="flex flex-col">
+                                        <span className="font-semibold text-foreground">Dr. Nitin Khasdeo</span>
+                                        <span className="text-xs text-muted-foreground">Compiler</span>
+                                        <span className="text-[10px] text-primary/70 italic">AKA: Gareeb Dacter, Presenter OP</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="font-semibold text-foreground">Ashwin Hingwe</span>
+                                        <span className="text-xs text-muted-foreground">Chief Developer</span>
+                                        <span className="text-[10px] text-primary/70 italic">AKA: Implementer, Spine</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="font-semibold text-foreground">Anurag Narre</span>
+                                        <span className="text-xs text-muted-foreground">Host</span>
+                                        <span className="text-[10px] text-primary/70 italic">AKA: ANDroid, Still Missing</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Guides Section */}
+                            <div>
+                                <h4 className="font-semibold text-foreground mb-3 border-b border-border pb-2 text-emerald-500">Guides</h4>
+                                <div className="space-y-4">
+                                    <div className="flex flex-col">
+                                        <span className="font-semibold text-foreground">Dr. Anil Raghavan</span>
+                                        <span className="text-xs text-muted-foreground">Original Idea, Design & Concept, Feedback, Resource Manager</span>
+                                        <span className="text-[10px] text-emerald-500/70 italic">AKA: THINK tank, Motivator OP</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="font-semibold text-foreground">Dr. Rohit Singh</span>
+                                        <span className="text-xs text-muted-foreground">Key Tester, Treatment Guidelines, Resource</span>
+                                        <span className="text-[10px] text-emerald-500/70 italic">AKA: RR-OP, Supporter OP, Moderator OP</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="font-semibold text-foreground">Dr. Akshay V</span>
+                                        <span className="text-xs text-muted-foreground">Key Feature Inputs</span>
+                                        <span className="text-[10px] text-emerald-500/70 italic">AKA: Surgeon OP</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="text-center">
+                        <p className="text-xs text-muted-foreground font-mono">
+                            Version 1.0.0 MVP
+                        </p>
+                    </div>
+
+                    <button
+                        onClick={() => setShowCredits(false)}
+                        className="w-full btn-primary py-3 mt-4"
+                    >
+                        Close
                     </button>
                 </div>
             </Modal>

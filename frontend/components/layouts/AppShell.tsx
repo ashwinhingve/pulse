@@ -8,7 +8,7 @@ import {
     MessageSquare, Bot, BookOpen, Shield, LogOut,
     ChevronLeft, ChevronRight, X, Lock,
     Users, Stethoscope, ClipboardList, Menu,
-    HeartPulse, FolderSearch,
+    HeartPulse, Info,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import {
@@ -56,12 +56,12 @@ const NAV_ITEMS: NavItem[] = [
     { href: '/dashboard/patients', label: 'Patients', icon: Users, roles: [UserRole.ARMY_MEDICAL_OFFICER, UserRole.PUBLIC_MEDICAL_OFFICIAL, UserRole.ADMIN], section: 'Clinical' },
     { href: '/dashboard/doctors', label: 'Doctors', icon: Stethoscope, roles: [UserRole.ARMY_MEDICAL_OFFICER, UserRole.PUBLIC_MEDICAL_OFFICIAL, UserRole.ADMIN], section: 'Clinical' },
     { href: '/dashboard/reports', label: 'Reports', icon: ClipboardList, roles: [UserRole.ARMY_MEDICAL_OFFICER, UserRole.PUBLIC_MEDICAL_OFFICIAL, UserRole.ADMIN], section: 'Clinical' },
-    { href: '/dashboard/documents', label: 'Documents & AI', icon: FolderSearch, roles: [UserRole.ARMY_MEDICAL_OFFICER, UserRole.PUBLIC_MEDICAL_OFFICIAL, UserRole.ADMIN], section: 'Clinical' },
     { href: '/dashboard/diagnoses', label: 'Diagnoses', icon: ClipboardList, roles: [UserRole.ARMY_MEDICAL_OFFICER, UserRole.PUBLIC_MEDICAL_OFFICIAL, UserRole.ADMIN], section: 'Clinical' },
     { href: '/dashboard/ecg', label: 'ECG Analysis', icon: Activity, roles: [UserRole.ARMY_MEDICAL_OFFICER], section: 'Clinical' },
     { href: '/dashboard/chat', label: 'Secure Chat', icon: MessageSquare, roles: [UserRole.ARMY_MEDICAL_OFFICER, UserRole.PUBLIC_MEDICAL_OFFICIAL, UserRole.ADMIN], section: 'Tools' },
     { href: '/dashboard/assistant', label: 'AI Assistant', icon: Bot, roles: [UserRole.ARMY_MEDICAL_OFFICER, UserRole.PUBLIC_MEDICAL_OFFICIAL, UserRole.ADMIN], section: 'Tools' },
     { href: '/dashboard/education', label: 'Medical Library', icon: BookOpen, roles: [UserRole.ARMY_MEDICAL_OFFICER, UserRole.PUBLIC_MEDICAL_OFFICIAL, UserRole.ADMIN], section: 'Tools' },
+    { href: '/dashboard/about', label: 'About & Credits', icon: Info, roles: [UserRole.ARMY_MEDICAL_OFFICER, UserRole.PUBLIC_MEDICAL_OFFICIAL, UserRole.ADMIN], section: 'System' },
     { href: '/admin', label: 'Admin Panel', icon: Shield, roles: [UserRole.ADMIN], section: 'System' },
 ];
 
@@ -236,22 +236,27 @@ function SidebarNav({ collapsed = false, mobileMode = false, onClose }: SidebarN
             {/* ── User footer ── */}
             <div className="border-t border-border/40 p-3 flex-shrink-0">
                 {isExpanded ? (
-                    <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-muted/30 transition-colors group cursor-default">
-                        <div className="h-10 w-10 bg-gradient-to-br from-medical-teal-400 to-medical-blue-500 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-soft ring-2 ring-primary/10">
-                            {initials}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-foreground truncate">{displayName}</p>
-                            <div className="flex items-center gap-1.5 mt-0.5">
-                                <span className={`text-2xs px-1.5 py-0.5 rounded font-bold ${clearanceBadgeClass(user?.clearanceLevel)}`}>
-                                    {user?.clearanceLevel !== undefined
-                                        ? CLEARANCE_NAMES[user.clearanceLevel as ClearanceLevel]
-                                        : 'UNCLASSIFIED'}
-                                </span>
+                    <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-muted/30 transition-colors group">
+                        <Link href="/dashboard/profile" className="flex items-center gap-3 flex-1 min-w-0" onClick={mobileMode ? onClose : undefined}>
+                            <div className="h-10 w-10 bg-gradient-to-br from-medical-teal-400 to-medical-blue-500 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-soft ring-2 ring-primary/10">
+                                {initials}
                             </div>
-                        </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-semibold text-foreground truncate group-hover:text-primary transition-colors">{displayName}</p>
+                                <div className="flex items-center gap-1.5 mt-0.5">
+                                    <span className={`text-2xs px-1.5 py-0.5 rounded font-bold ${clearanceBadgeClass(user?.clearanceLevel)}`}>
+                                        {user?.clearanceLevel !== undefined
+                                            ? CLEARANCE_NAMES[user.clearanceLevel as ClearanceLevel]
+                                            : 'UNCLASSIFIED'}
+                                    </span>
+                                </div>
+                            </div>
+                        </Link>
                         <button
-                            onClick={handleLogout}
+                            onClick={(e) => {
+                                e.preventDefault();
+                                handleLogout();
+                            }}
                             className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
                             title="Sign out"
                         >
@@ -337,15 +342,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 {/* ── Main content ── */}
                 <div className="flex-1 flex flex-col min-w-0 overflow-y-auto scrollbar-thin relative main-scroll-content">
                     {/* ── Colored mobile top header ── */}
-                    <div className="lg:hidden relative z-20 flex flex-col bg-gradient-to-r from-primary via-primary to-accent/90 text-white shadow-md flex-shrink-0" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+                    <div className="lg:hidden relative z-20 flex flex-col bg-gradient-to-r from-primary via-primary to-accent/90 text-white shadow-md flex-shrink-0" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 8px)' }}>
                     <div className="flex items-center h-12 px-4">
-                        <button
-                            onClick={() => setIsMobileOpen(true)}
-                            className="p-1.5 -ml-1 rounded-xl hover:bg-white/15 active:bg-white/25 transition-colors"
-                            aria-label="Open menu"
-                        >
-                            <Menu size={20} />
-                        </button>
+                        {/* Placeholder purely for centering the logo/title */}
+                        <div className="w-8" />
                         <div className="flex-1 flex items-center justify-center gap-2">
                             <LogoIcon size={20} />
                             <span className="font-bold font-display text-[14px] tracking-tight">PulseLogic</span>
@@ -372,7 +372,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 const ARMY_TABS = [
     { href: '/dashboard', label: 'Home', icon: LayoutDashboard },
     { href: '/dashboard/patients', label: 'Patients', icon: Users },
-    { href: '/dashboard/documents', label: 'Docs', icon: FolderSearch },
+    { href: '/dashboard/reports', label: 'Reports', icon: ClipboardList },
     { href: '/dashboard/chat', label: 'Chat', icon: MessageSquare },
     { href: '/dashboard/assistant', label: 'AI', icon: Bot },
 ];
@@ -380,7 +380,7 @@ const ARMY_TABS = [
 const PUBLIC_TABS = [
     { href: '/dashboard', label: 'Home', icon: LayoutDashboard },
     { href: '/dashboard/patients', label: 'Patients', icon: Users },
-    { href: '/dashboard/documents', label: 'Docs', icon: FolderSearch },
+    { href: '/dashboard/reports', label: 'Reports', icon: ClipboardList },
     { href: '/dashboard/chat', label: 'Chat', icon: MessageSquare },
     { href: '/dashboard/assistant', label: 'AI', icon: Bot },
 ];
@@ -388,7 +388,7 @@ const PUBLIC_TABS = [
 const ADMIN_TABS = [
     { href: '/dashboard', label: 'Home', icon: LayoutDashboard },
     { href: '/dashboard/patients', label: 'Patients', icon: Users },
-    { href: '/dashboard/documents', label: 'Docs', icon: FolderSearch },
+    { href: '/dashboard/reports', label: 'Reports', icon: ClipboardList },
     { href: '/dashboard/assistant', label: 'AI', icon: Bot },
     { href: '/admin', label: 'Admin', icon: Shield },
 ];
