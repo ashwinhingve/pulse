@@ -76,15 +76,26 @@ pulse/
 | npm | 10+ |
 
 ###
+<<<<<<< HEAD
+```bash
+docker-compose up -d           # start PostgreSQL + Redis
+```
+=======
 ```
 docker-compose up -d  # start PostgreSQL + Redis
  ``` 
 
 ### Backend
+>>>>>>> 08d69f4dbd286e3af514a4cddf5c902cbea521f0
 
+### Backend
 ```bash
 cd backend
+<<<<<<< HEAD
+cp .env.example .env          # fill in secrets
+=======
 cp .env.example .env          # fill in secrets        
+>>>>>>> 08d69f4dbd286e3af514a4cddf5c902cbea521f0
 npm install
 npm run start:dev
 ```
@@ -188,6 +199,7 @@ set JAVA_HOME=C:\Program Files\Microsoft\jdk-21.0.7.6-hotspot
 set PATH=%JAVA_HOME%\bin;%PATH%
 
 gradlew.bat assembleRelease
+.\gradlew.bat assembleRelease
 ```
 
 **Output:** `android/app/build/outputs/apk/release/app-release.apk`
@@ -265,7 +277,7 @@ This generates all required sizes in `src-tauri/icons/`.
 cd frontend
 
 # Copy desktop environment
-cp .env.desktop .env.local    # Windows: copy .env.desktop .env.local
+cp .env.desktop .env.local    # Windows: copy .env.desktop .env.local 
 
 # Build (produces native installer for current platform)
 npx tauri build
@@ -563,5 +575,3 @@ NEXTAUTH_SECRET=<random-32-char-string>
 
 UNLICENSED — Proprietary software. All rights reserved.
 
-
-ashwin

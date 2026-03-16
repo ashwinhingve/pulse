@@ -1,7 +1,24 @@
 // Mobile authentication utilities for Capacitor builds
 // This bypasses NextAuth and uses direct API calls with local token storage
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+const _rawApiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+
+// In a Capacitor native app, a relative URL like '/api' is useless — there is no
+// local web server on the device. Detect this at runtime and fall back to the
+// production Railway URL so the APK still works even if built with the wrong env.
+const API_URL = (() => {
+    if (_rawApiUrl.startsWith('/')) {
+        const fallback = 'https://pulse-production-5c69.up.railway.app/api';
+        if (typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.()) {
+            console.warn(
+                `[mobile-auth] NEXT_PUBLIC_API_URL is a relative path ("${_rawApiUrl}") which does not work in a native app. ` +
+                `Falling back to ${fallback}. Rebuild with "npm run android:build" to fix permanently.`
+            );
+            return fallback;
+        }
+    }
+    return _rawApiUrl;
+})();
 
 // Check if running in Capacitor (mobile)
 export const isMobile = (): boolean => {
