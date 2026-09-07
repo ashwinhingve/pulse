@@ -248,10 +248,10 @@ export default function AssistantPage() {
     const isEmptyChat = messages.length === 0;
 
     return (
-        <div className="min-h-screen bg-background flex flex-col pb-[60px] lg:pb-0">
+        <div className="h-[calc(100vh-4rem)] lg:h-screen bg-background flex flex-col overflow-hidden pb-16 lg:pb-0">
             {/* Header */}
-            <header className="glass border-b border-border sticky top-0 z-30">
-                <div className="max-w-4xl mx-auto px-4 h-16 flex items-center gap-3">
+            <header className="glass border-b border-border sticky top-0 z-30 flex-shrink-0">
+                <div className="max-w-[1400px] mx-auto px-4 h-16 flex items-center gap-3">
                     <button onClick={() => router.back()} className="p-2 hover:bg-muted rounded-xl transition-colors">
                         <ArrowLeft size={20} className="text-foreground" />
                     </button>
@@ -287,12 +287,12 @@ export default function AssistantPage() {
                 </div>
             </header>
 
-            <main className="flex-1 max-w-4xl w-full mx-auto flex flex-col overflow-hidden">
+            <main className="flex-1 max-w-[1400px] w-full mx-auto flex flex-col overflow-hidden">
                 {/* Chat area */}
                 <div className="flex-1 overflow-y-auto">
                     {isEmptyChat ? (
                         /* Empty state — landing */
-                        <div className="px-4 py-8 space-y-8 animate-fade-in">
+                        <div className="px-4 py-6 space-y-6 animate-fade-in max-w-4xl mx-auto">
                             {/* Welcome */}
                             <div className="text-center space-y-3">
                                 <div className="w-16 h-16 bg-gradient-to-br from-violet-600 to-fuchsia-500 rounded-3xl flex items-center justify-center text-white mx-auto shadow-xl shadow-violet-500/20">
@@ -353,7 +353,7 @@ export default function AssistantPage() {
                         </div>
                     ) : (
                         /* Messages */
-                        <div className="p-4 space-y-5">
+                        <div className="p-4 space-y-5 max-w-4xl mx-auto w-full">
                             {messages.map(message => (
                                 <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
                                     <div className={`flex gap-2.5 max-w-[88%] ${message.role === 'user' ? 'flex-row-reverse' : ''}`}>

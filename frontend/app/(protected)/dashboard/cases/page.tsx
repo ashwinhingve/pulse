@@ -91,12 +91,12 @@ export default function CasesPage() {
             />
 
             <main className="flex-1 w-full">
-                <div className="container-app space-y-4 pb-24 lg:pb-8 max-w-4xl animate-fade-in">
+                <div className="container-app space-y-4 pb-24 lg:pb-8 max-w-[1600px] animate-fade-in">
                     {error && <ErrorBanner message={error} onDismiss={() => setError('')} />}
 
                     <div className="flex gap-2">
                         <div className="flex-1">
-                            <SearchBar value={searchQuery} onChange={setSearchQuery} placeholder="Search cases..." />
+                            <SearchBar value={searchQuery} onChange={setSearchQuery} placeholder="Search cases by complaint or case number..." />
                         </div>
                         <select
                             value={filterSeverity}
@@ -111,7 +111,7 @@ export default function CasesPage() {
                     </div>
 
                     {isLoading ? (
-                        <LoadingSkeleton variant="row" count={5} />
+                        <LoadingSkeleton variant="card" count={6} />
                     ) : filteredCases.length === 0 ? (
                         <EmptyState
                             icon={FileText}
@@ -124,7 +124,7 @@ export default function CasesPage() {
                             ) : undefined}
                         />
                     ) : (
-                        <div className="space-y-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {filteredCases.map((c, i) => {
                                 const sevInfo = SEVERITY_MAP[c.severity] || SEVERITY_MAP.routine;
                                 const statInfo = STATUS_MAP[c.status] || STATUS_MAP.open;

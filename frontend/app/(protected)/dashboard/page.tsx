@@ -18,12 +18,14 @@ import { useSidebar } from '@/components/layouts/AppShell';
 import { api } from '@/lib/api';
 import { LogoIcon } from '@/components/ui/Logo';
 import StatCard from '@/components/ui/StatCard';
-import ChartPlaceholder from '@/components/ui/ChartPlaceholder';
+import { CaseVolumeChart, CaseCompletionChart } from '@/components/ui/DashboardCharts';
 import { NotificationBell } from '@/components/ui/NotificationPanel';
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton';
 import EmptyState from '@/components/ui/EmptyState';
 
 /* ── Types ─────────────────────────────────── */
+
+type StatColor = 'teal' | 'blue' | 'purple' | 'cyan' | 'emerald' | 'amber' | 'red';
 
 interface DashboardStats {
     patients: number;
@@ -34,6 +36,16 @@ interface DashboardStats {
     symptoms: number;
     users: number;
     recentActivity: { action: string; time: string; type: string }[];
+    charts?: {
+        monthlyCaseVolume: { month: string; cases: number }[];
+        caseCompletionRate: {
+            closed: number;
+            open: number;
+            inProgress: number;
+            total: number;
+            completionPct: number;
+        };
+    };
 }
 
 /* ── Component ─────────────────────────────── */
@@ -80,7 +92,6 @@ export default function DashboardPage() {
     const isAdmin = userRole === UserRole.ADMIN;
 
     /* ── Stat cards ── */
-    type StatColor = 'teal' | 'blue' | 'purple' | 'cyan' | 'emerald' | 'amber' | 'red';
     const getStatCards = (): { label: string; value: number; icon: any; color: StatColor }[] => {
         if (!stats) return [];
         if (isArmyOfficer) return [
@@ -163,7 +174,7 @@ export default function DashboardPage() {
         <div className="flex flex-col min-h-full safe-top">
             {/* ── Header ── */}
             <header className="relative lg:sticky lg:top-0 z-30 h-16 flex-shrink-0 border-b border-border/40" style={{ background: 'var(--glass-bg)', backdropFilter: 'blur(20px)' }}>
-                <div className="h-full px-4 lg:px-6 flex items-center justify-between max-w-7xl mx-auto">
+                <div className="h-full px-4 sm:px-6 lg:px-10 flex items-center justify-between max-w-[1600px] w-full mx-auto">
                     <div className="flex items-center gap-3">
                         <button onClick={openMobile} className="p-2 hover:bg-muted/50 rounded-xl lg:hidden touch-target" aria-label="Open menu">
                             <Menu size={22} className="text-foreground" />
@@ -244,29 +255,28 @@ export default function DashboardPage() {
 
             {/* ── Main ── */}
             <main className="flex-1 w-full">
-                <div className="container-app space-y-6 pb-24 lg:pb-8 max-w-7xl">
+                <div className="container-app space-y-4 pb-20 lg:pb-6 max-w-[1600px]">
 
-                    {/* Welcome banner */}
+                    {/* Top Row: Compact Welcome Banner */}
                     <motion.div
-                        initial={{ opacity: 0, y: 16 }}
+                        initial={{ opacity: 0, y: 12 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.4 }}
-                        className="relative overflow-hidden rounded-2xl p-6 lg:p-8"
+                        transition={{ duration: 0.3 }}
+                        className="relative overflow-hidden rounded-2xl p-4 sm:p-5"
                         style={{ background: 'linear-gradient(135deg, hsl(172 66% 38%), hsl(187 72% 40%), hsl(215 60% 42%))' }}
                     >
                         <div className="absolute inset-0 opacity-10">
-                            <div className="absolute -top-10 -right-10 w-40 h-40 bg-white rounded-full blur-2xl" />
-                            <div className="absolute bottom-0 left-1/4 w-32 h-32 bg-white rounded-full blur-3xl" />
+                            <div className="absolute -top-10 -right-10 w-36 h-36 bg-white rounded-full blur-2xl" />
                         </div>
-                        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                             <div>
-                                <div className="flex flex-wrap items-center gap-3 mb-2">
-                                    <h2 className="text-2xl font-bold text-white font-display">Welcome back, {displayName}</h2>
-                                    <span className="text-xs px-2.5 py-1 rounded-full bg-white/20 text-white/90 font-medium backdrop-blur-sm">
+                                <div className="flex flex-wrap items-center gap-2.5 mb-1">
+                                    <h2 className="text-xl sm:text-2xl font-bold text-white font-display">Welcome back, {displayName}</h2>
+                                    <span className="text-2xs px-2.5 py-0.5 rounded-full bg-white/20 text-white/90 font-medium backdrop-blur-sm">
                                         {userRole ? ROLE_DISPLAY_NAMES[userRole] : 'User'}
                                     </span>
                                 </div>
-                                <div className="flex items-center gap-3 text-sm text-white/70">
+                                <div className="flex items-center gap-3 text-xs text-white/80">
                                     <span className="flex items-center gap-1.5">
                                         <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse-soft" />
                                         Secure Vault Active
@@ -274,117 +284,151 @@ export default function DashboardPage() {
                                     <span className="font-semibold text-white/90">
                                         {CLEARANCE_NAMES[clearanceLevel] || 'UNCLASSIFIED'}
                                     </span>
+                                    {user?.department && (
+                                        <span className="hidden sm:inline text-white/70">
+                                            • {user.department}
+                                        </span>
+                                    )}
                                 </div>
-                                {user?.department && (
-                                    <p className="text-sm text-white/60 mt-1 flex items-center gap-1.5">
-                                        <Briefcase size={14} /> {user.department}
-                                    </p>
-                                )}
                             </div>
-                            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 text-white text-sm font-medium">
-                                <Lock size={14} /> 256-bit Encrypted
+                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 text-white text-xs font-medium self-start sm:self-auto">
+                                <Lock size={13} /> 256-bit Encrypted
                             </div>
                         </div>
                     </motion.div>
 
                     {/* Stat cards */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                         {statsLoading ? (
                             <LoadingSkeleton variant="stat" count={4} className="col-span-full" />
                         ) : (
                             statCards.map((stat, i) => (
-                                <StatCard key={stat.label} icon={stat.icon} label={stat.label} value={stat.value} color={stat.color} delay={i * 0.08} />
+                                <StatCard key={stat.label} icon={stat.icon} label={stat.label} value={stat.value} color={stat.color} delay={i * 0.05} />
                             ))
                         )}
                     </div>
 
-                    {/* Quick actions */}
-                    {(isArmyOfficer || isPublicOfficial) && (
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} className="flex flex-wrap gap-3">
-                            <button onClick={() => router.push('/dashboard/chat')} className="btn-primary text-sm rounded-xl py-2.5">
-                                <MessageSquare size={16} />
-                                {isArmyOfficer ? 'Contact Public Official' : 'Contact Army Officer'}
-                            </button>
-                            <button onClick={() => router.push('/dashboard/assistant')} className="btn-glass text-sm rounded-xl py-2.5 min-h-0">
-                                <Bot size={16} /> Ask AI Assistant
-                            </button>
-                        </motion.div>
-                    )}
-
-                    {/* Charts row */}
-                    <div className="grid md:grid-cols-2 gap-4">
-                        <ChartPlaceholder type="bar" title="Monthly Case Volume" subtitle="Last 12 months" />
-                        <ChartPlaceholder type="donut" title="Case Completion Rate" subtitle="Current quarter" />
-                    </div>
-
-                    {/* Feature cards */}
-                    <div>
-                        <h2 className="text-base font-semibold text-foreground mb-4 font-display">
-                            {isArmyOfficer ? 'Field Medical Tools' : isPublicOfficial ? 'Public Health Tools' : 'System Tools'}
-                        </h2>
-                        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                            {features.map((feature, i) => {
-                                const Icon = feature.icon;
-                                return (
-                                    <motion.button
-                                        key={feature.title}
-                                        initial={{ opacity: 0, y: 16 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: 0.05 * i, duration: 0.3 }}
-                                        onClick={() => router.push(feature.href)}
-                                        className="glass-card p-5 text-left group relative overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300 active:scale-[0.98]"
-                                    >
-                                        <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <ChevronRight size={16} className="text-muted-foreground" />
-                                        </div>
-                                        <div className={`w-11 h-11 rounded-2xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-4 text-white shadow-soft group-hover:scale-110 transition-transform duration-300`}>
-                                            <Icon size={20} />
-                                        </div>
-                                        <h3 className="font-semibold text-foreground mb-1 text-sm">{feature.title}</h3>
-                                        <p className="text-xs text-muted-foreground">{feature.desc}</p>
-                                    </motion.button>
-                                );
-                            })}
-                        </div>
-                    </div>
-
-                    {/* Recent activity */}
-                    <div>
-                        <h2 className="text-base font-semibold text-foreground mb-4 font-display">Recent Activity</h2>
-                        <div className="glass-card overflow-hidden">
-                            {statsLoading ? (
-                                <LoadingSkeleton variant="row" count={3} className="" />
-                            ) : stats?.recentActivity && stats.recentActivity.length > 0 ? (
-                                stats.recentActivity.map((activity, i) => (
-                                    <motion.div
-                                        key={i}
-                                        initial={{ opacity: 0, x: -8 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: i * 0.05 }}
-                                        className="flex items-center justify-between p-4 border-b border-border/30 last:border-0 hover:bg-primary/[0.03] transition-colors"
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${activityColor(activity.type)}`}>
-                                                {activityIcon(activity.type)}
-                                            </div>
-                                            <span className="text-sm text-foreground">{activity.action}</span>
-                                        </div>
-                                        <span className="text-xs text-muted-foreground flex-shrink-0">{formatTimeAgo(activity.time)}</span>
-                                    </motion.div>
-                                ))
-                            ) : (
-                                <EmptyState
-                                    icon={Activity}
-                                    title="No recent activity"
-                                    description="Activity will appear here as you use the system"
-                                    className="py-12"
+                    {/* Integrated Dashboard Grid - Landscape Layout */}
+                    <div className="space-y-4">
+                        {/* Full Width Trend Graph */}
+                        <div className="w-full">
+                            {stats?.charts ? (
+                                <CaseVolumeChart
+                                    data={stats.charts.monthlyCaseVolume}
+                                    title="Monthly Case Volume"
+                                    subtitle="Last 12 months"
                                 />
+                            ) : (
+                                <LoadingSkeleton variant="stat" count={1} className="h-48" />
                             )}
+                        </div>
+
+                        {/* 50/50 Split Grid */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                            {/* Left Panel: Target/Completion Chart & Tools */}
+                            <div className="space-y-4">
+                                {stats?.charts ? (
+                                    <CaseCompletionChart
+                                        data={stats.charts.caseCompletionRate}
+                                        title="Case Completion Rate"
+                                        subtitle="All time"
+                                    />
+                                ) : (
+                                    <LoadingSkeleton variant="stat" count={1} className="h-48" />
+                                )}
+
+                                {/* Clinical & System Tools */}
+                                <div>
+                                    <h3 className="text-sm font-semibold text-foreground mb-2.5 font-display">
+                                        {isArmyOfficer ? 'Field Medical Tools' : isPublicOfficial ? 'Public Health Tools' : 'System Tools'}
+                                    </h3>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                                    {features.map((feature, i) => {
+                                        const Icon = feature.icon;
+                                        return (
+                                            <motion.button
+                                                key={feature.title}
+                                                initial={{ opacity: 0, y: 12 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ delay: 0.03 * i, duration: 0.25 }}
+                                                onClick={() => router.push(feature.href)}
+                                                className="glass-card p-3 sm:p-3.5 text-left group relative overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 active:scale-[0.98]"
+                                            >
+                                                <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-2 text-white shadow-soft group-hover:scale-105 transition-transform duration-200`}>
+                                                    <Icon size={16} />
+                                                </div>
+                                                <h4 className="font-semibold text-foreground mb-0.5 text-xs truncate">{feature.title}</h4>
+                                                <p className="text-[11px] text-muted-foreground line-clamp-1">{feature.desc}</p>
+                                            </motion.button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Right Panel: Live Sidebar & Quick Actions */}
+                        <div className="space-y-4">
+                            {/* Quick Action Shortcuts */}
+                            {(isArmyOfficer || isPublicOfficial) && (
+                                <div className="glass-card p-4 space-y-2.5">
+                                    <h3 className="text-xs font-semibold text-foreground uppercase tracking-wider text-muted-foreground">Quick Actions</h3>
+                                    <div className="flex flex-col gap-2">
+                                        <button onClick={() => router.push('/dashboard/chat')} className="btn-primary text-xs rounded-xl py-2.5 w-full justify-center">
+                                            <MessageSquare size={15} />
+                                            {isArmyOfficer ? 'Contact Public Official' : 'Contact Army Officer'}
+                                        </button>
+                                        <button onClick={() => router.push('/dashboard/assistant')} className="btn-glass text-xs rounded-xl py-2.5 min-h-0 w-full justify-center">
+                                            <Bot size={15} /> Ask AI Assistant
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Live Recent Activity */}
+                            <div className="glass-card overflow-hidden">
+                                <div className="p-3.5 border-b border-border/40 bg-muted/20 flex items-center justify-between">
+                                    <h3 className="text-xs font-semibold text-foreground uppercase tracking-wider text-muted-foreground">Recent Activity</h3>
+                                    <span className="text-2xs text-emerald-500 font-bold flex items-center gap-1">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" /> Live
+                                    </span>
+                                </div>
+                                <div className="max-h-[360px] overflow-y-auto scrollbar-thin divide-y divide-border/20">
+                                    {statsLoading ? (
+                                        <LoadingSkeleton variant="row" count={3} className="" />
+                                    ) : stats?.recentActivity && stats.recentActivity.length > 0 ? (
+                                        stats.recentActivity.map((activity, i) => (
+                                            <motion.div
+                                                key={i}
+                                                initial={{ opacity: 0, x: -6 }}
+                                                animate={{ opacity: 1, x: 0 }}
+                                                transition={{ delay: i * 0.04 }}
+                                                className="flex items-center justify-between p-3 hover:bg-primary/[0.03] transition-colors"
+                                            >
+                                                <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                                                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${activityColor(activity.type)}`}>
+                                                        {activityIcon(activity.type)}
+                                                    </div>
+                                                    <span className="text-xs text-foreground truncate">{activity.action}</span>
+                                                </div>
+                                                <span className="text-[10px] text-muted-foreground flex-shrink-0">{formatTimeAgo(activity.time)}</span>
+                                            </motion.div>
+                                        ))
+                                    ) : (
+                                        <EmptyState
+                                            icon={Activity}
+                                            title="No recent activity"
+                                            description="Activity logs appear here"
+                                            className="py-8"
+                                        />
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
+                </div>
                 {/* Mobile Bottom Spacer */}
-                <div className="h-[80px] lg:hidden w-full flex-shrink-0" aria-hidden="true" />
+                <div className="h-[70px] lg:hidden w-full flex-shrink-0" aria-hidden="true" />
             </main>
         </div>
     );

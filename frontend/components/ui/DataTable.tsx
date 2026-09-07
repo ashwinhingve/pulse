@@ -22,7 +22,7 @@ export default function DataTable<T extends Record<string, any>>({
 }: DataTableProps<T>) {
     return (
         <div className={cn('glass-card overflow-hidden', className)}>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto scrollbar-thin">
                 <table className="w-full">
                     <thead>
                         <tr className="border-b border-border/50">

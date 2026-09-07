@@ -3,6 +3,8 @@
 A secure, multi-platform medical decision-support system with role-based access control,
 clearance-level gating, AI-powered diagnostics, and offline-capable mobile/desktop clients.
 
+> **UI/UX Architecture Standard**: All pages and future app rebuilds follow the single-display, multi-viewport layout standard detailed in [LAYOUT_SPECIFICATION.md](file:///d:/App%20and%20Hardware%20Project/App/PULSE/LAYOUT_SPECIFICATION.md).
+
 ---
 
 ## Team Workflow (Read This First)

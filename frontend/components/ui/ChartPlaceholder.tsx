@@ -11,12 +11,12 @@ interface ChartPlaceholderProps {
 
 export default function ChartPlaceholder({ type = 'bar', title, subtitle, className }: ChartPlaceholderProps) {
     return (
-        <div className={cn('glass-card p-5', className)}>
-            <div className="mb-4">
-                <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-                {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
+        <div className={cn('glass-card p-3.5 sm:p-4', className)}>
+            <div className="mb-2.5">
+                <h3 className="text-xs sm:text-sm font-semibold text-foreground">{title}</h3>
+                {subtitle && <p className="text-2xs sm:text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
             </div>
-            <div className="h-44 flex items-end justify-center gap-2 px-2">
+            <div className="h-36 sm:h-40 flex items-end justify-center gap-1.5 px-1">
                 {type === 'bar' && (
                     <>
                         {[65, 45, 80, 55, 90, 40, 70, 60, 85, 50, 75, 95].map((h, i) => (

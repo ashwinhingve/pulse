@@ -4,6 +4,7 @@ import { ReactNode } from 'react';
 import Link from 'next/link';
 import { Shield, Lock, Activity, Heart, Fingerprint, Wifi } from 'lucide-react';
 import { LogoIcon } from '@/components/ui/Logo';
+import ThemeToggle from '@/components/ui/ThemeToggle';
 
 interface AuthLayoutProps {
     children: ReactNode;
@@ -107,6 +108,10 @@ export default function AuthLayout({
 
                 {/* Scrollable content */}
                 <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 py-8 sm:px-6 md:py-12 overflow-y-auto scrollbar-thin">
+                    {/* Top right theme toggle */}
+                    <div className="absolute top-4 right-4 z-20">
+                        <ThemeToggle compact />
+                    </div>
                     {/* Branding */}
                     <div className="mb-8 text-center animate-fade-in">
                         <Link href="/" className="inline-block group">

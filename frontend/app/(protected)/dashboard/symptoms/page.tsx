@@ -176,268 +176,278 @@ export default function SymptomsPage() {
             />
 
             <main className="flex-1 w-full">
-                <div className="container-app space-y-5 pb-24 lg:pb-8 max-w-4xl animate-fade-in">
-                {/* Disclaimer banner */}
-                <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/10 dark:to-orange-900/10 border border-amber-200 dark:border-amber-800/50 rounded-2xl p-4 flex items-start gap-3">
-                    <div className="w-8 h-8 bg-amber-100 dark:bg-amber-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <Shield className="text-amber-600 dark:text-amber-400" size={16} />
-                    </div>
-                    <div>
-                        <p className="text-sm text-amber-800 dark:text-amber-200 font-semibold">Decision Support Only</p>
-                        <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5 leading-relaxed">
-                            AI-assisted guidance for clinical decision support. Not a medical diagnosis. Always consult qualified medical personnel.
-                        </p>
-                    </div>
-                </div>
-
-                {/* Selected symptoms summary */}
-                {selectedSymptoms.length > 0 && (
-                    <div className="glass-card p-4">
-                        <div className="flex items-center justify-between mb-3">
-                            <h3 className="text-sm font-semibold text-foreground">Selected Symptoms</h3>
-                            <button onClick={handleReset} className="text-xs text-muted-foreground hover:text-destructive transition-colors">
-                                Clear all
-                            </button>
+                <div className="container-app space-y-5 pb-24 lg:pb-8 max-w-[1600px] animate-fade-in">
+                    {/* Disclaimer banner */}
+                    <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/10 dark:to-orange-900/10 border border-amber-200 dark:border-amber-800/50 rounded-2xl p-3.5 flex items-start gap-3">
+                        <div className="w-8 h-8 bg-amber-100 dark:bg-amber-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <Shield className="text-amber-600 dark:text-amber-400" size={16} />
                         </div>
-                        <div className="flex flex-wrap gap-1.5">
-                            {selectedSymptoms.map(s => (
-                                <button
-                                    key={s}
-                                    onClick={() => toggleSymptom(s)}
-                                    className="px-2.5 py-1 rounded-lg text-xs font-medium bg-primary/10 text-primary border border-primary/20 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20 transition-all"
-                                >
-                                    {s} ×
-                                </button>
-                            ))}
+                        <div>
+                            <p className="text-sm text-amber-800 dark:text-amber-200 font-semibold">Decision Support Only</p>
+                            <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5 leading-relaxed">
+                                AI-assisted guidance for clinical decision support. Not a medical diagnosis. Always consult qualified medical personnel.
+                            </p>
                         </div>
                     </div>
-                )}
 
-                {/* Symptom categories — collapsible */}
-                <div className="space-y-2">
-                    <h2 className="text-base font-bold text-foreground px-1">Select Symptoms by Region</h2>
-                    {symptomCategories.map(cat => {
-                        const isExpanded = expandedCategory === cat.name;
-                        const activeCount = cat.symptoms.filter(s => selectedSymptoms.includes(s)).length;
-                        return (
-                            <div key={cat.name} className="glass-card overflow-hidden transition-all">
-                                <button
-                                    onClick={() => setExpandedCategory(isExpanded ? null : cat.name)}
-                                    className="w-full flex items-center gap-3 p-4 hover:bg-muted/50 transition-colors"
-                                >
-                                    <div className={`w-9 h-9 ${cat.bgColor} rounded-xl flex items-center justify-center flex-shrink-0`}>
-                                        <span className={cat.color}>{cat.icon}</span>
-                                    </div>
-                                    <span className="font-semibold text-sm text-foreground flex-1 text-left">{cat.name}</span>
-                                    {activeCount > 0 && (
-                                        <span className="bg-primary text-primary-foreground text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
-                                            {activeCount}
-                                        </span>
-                                    )}
-                                    {isExpanded ? <ChevronUp size={16} className="text-muted-foreground" /> : <ChevronDown size={16} className="text-muted-foreground" />}
-                                </button>
-                                {isExpanded && (
-                                    <div className="px-4 pb-4 flex flex-wrap gap-2 animate-fade-in">
-                                        {cat.symptoms.map(symptom => (
+                    {/* 12-Column Split Workspace */}
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                        {/* Left Side: Symptom Selection & Vitals (7 cols) */}
+                        <div className="lg:col-span-7 space-y-4">
+                            {/* Symptom categories — collapsible */}
+                            <div className="space-y-2">
+                                <h2 className="text-sm font-bold text-foreground px-1 uppercase tracking-wider text-muted-foreground">Select Symptoms by Region</h2>
+                                {symptomCategories.map(cat => {
+                                    const isExpanded = expandedCategory === cat.name;
+                                    const activeCount = cat.symptoms.filter(s => selectedSymptoms.includes(s)).length;
+                                    return (
+                                        <div key={cat.name} className="glass-card overflow-hidden transition-all">
                                             <button
-                                                key={symptom}
-                                                onClick={() => toggleSymptom(symptom)}
-                                                className={`px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
-                                                    selectedSymptoms.includes(symptom)
-                                                        ? 'bg-primary text-primary-foreground shadow-soft scale-[1.02]'
-                                                        : 'bg-secondary/60 text-secondary-foreground hover:bg-secondary'
+                                                onClick={() => setExpandedCategory(isExpanded ? null : cat.name)}
+                                                className="w-full flex items-center gap-3 p-3.5 hover:bg-muted/50 transition-colors"
+                                            >
+                                                <div className={`w-8 h-8 ${cat.bgColor} rounded-xl flex items-center justify-center flex-shrink-0`}>
+                                                    <span className={cat.color}>{cat.icon}</span>
+                                                </div>
+                                                <span className="font-semibold text-sm text-foreground flex-1 text-left">{cat.name}</span>
+                                                {activeCount > 0 && (
+                                                    <span className="bg-primary text-primary-foreground text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
+                                                        {activeCount}
+                                                    </span>
+                                                )}
+                                                {isExpanded ? <ChevronUp size={16} className="text-muted-foreground" /> : <ChevronDown size={16} className="text-muted-foreground" />}
+                                            </button>
+                                            {isExpanded && (
+                                                <div className="px-3.5 pb-3.5 flex flex-wrap gap-2 animate-fade-in">
+                                                    {cat.symptoms.map(symptom => (
+                                                        <button
+                                                            key={symptom}
+                                                            onClick={() => toggleSymptom(symptom)}
+                                                            className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-200 ${
+                                                                selectedSymptoms.includes(symptom)
+                                                                    ? 'bg-primary text-primary-foreground shadow-soft scale-[1.02]'
+                                                                    : 'bg-secondary/60 text-secondary-foreground hover:bg-secondary'
+                                                            }`}
+                                                        >
+                                                            {selectedSymptoms.includes(symptom) && <CheckCircle2 size={13} className="inline mr-1 -mt-0.5" />}
+                                                            {symptom}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Severity & Duration */}
+                            <div className="grid sm:grid-cols-2 gap-3.5">
+                                <div className="glass-card p-4">
+                                    <h3 className="text-xs font-semibold text-foreground mb-2.5 flex items-center gap-1.5 uppercase tracking-wider text-muted-foreground">
+                                        <Zap size={14} className="text-amber-500" /> Overall Severity
+                                    </h3>
+                                    <div className="space-y-1.5">
+                                        {severityLevels.map(lvl => (
+                                            <button
+                                                key={lvl.value}
+                                                onClick={() => setSeverity(lvl.value)}
+                                                className={`w-full flex items-center gap-2.5 p-2.5 rounded-xl text-left transition-all ${
+                                                    severity === lvl.value
+                                                        ? 'bg-primary/10 border border-primary'
+                                                        : 'border border-transparent hover:bg-muted/50'
                                                 }`}
                                             >
-                                                {selectedSymptoms.includes(symptom) && <CheckCircle2 size={14} className="inline mr-1 -mt-0.5" />}
-                                                {symptom}
+                                                <div className={`w-2.5 h-2.5 rounded-full ${lvl.color}`} />
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-xs font-semibold text-foreground">{lvl.label}</p>
+                                                    <p className="text-[10px] text-muted-foreground truncate">{lvl.desc}</p>
+                                                </div>
+                                                {severity === lvl.value && <CheckCircle2 size={15} className="text-primary flex-shrink-0" />}
                                             </button>
                                         ))}
                                     </div>
-                                )}
-                            </div>
-                        );
-                    })}
-                </div>
+                                </div>
 
-                {/* Severity & Duration */}
-                <div className="grid sm:grid-cols-2 gap-4">
-                    <div className="glass-card p-5">
-                        <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-                            <Zap size={16} className="text-amber-500" /> Overall Severity
-                        </h3>
-                        <div className="space-y-2">
-                            {severityLevels.map(lvl => (
-                                <button
-                                    key={lvl.value}
-                                    onClick={() => setSeverity(lvl.value)}
-                                    className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all ${
-                                        severity === lvl.value
-                                            ? 'bg-primary/10 border-2 border-primary'
-                                            : 'border-2 border-transparent hover:bg-muted/50'
-                                    }`}
-                                >
-                                    <div className={`w-3 h-3 rounded-full ${lvl.color}`} />
-                                    <div className="flex-1">
-                                        <p className="text-sm font-semibold text-foreground">{lvl.label}</p>
-                                        <p className="text-xs text-muted-foreground">{lvl.desc}</p>
+                                <div className="glass-card p-4">
+                                    <h3 className="text-xs font-semibold text-foreground mb-2.5 flex items-center gap-1.5 uppercase tracking-wider text-muted-foreground">
+                                        <Clock size={14} className="text-blue-500" /> Duration
+                                    </h3>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {durationOptions.map(d => (
+                                            <button
+                                                key={d}
+                                                onClick={() => setDuration(duration === d ? '' : d)}
+                                                className={`px-2.5 py-1.5 rounded-xl text-xs font-medium transition-all ${
+                                                    duration === d
+                                                        ? 'bg-primary text-primary-foreground shadow-soft'
+                                                        : 'bg-secondary/60 text-secondary-foreground hover:bg-secondary'
+                                                }`}
+                                            >
+                                                {d}
+                                            </button>
+                                        ))}
                                     </div>
-                                    {severity === lvl.value && <CheckCircle2 size={16} className="text-primary" />}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="glass-card p-5">
-                        <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-                            <Clock size={16} className="text-blue-500" /> Duration
-                        </h3>
-                        <div className="flex flex-wrap gap-2">
-                            {durationOptions.map(d => (
-                                <button
-                                    key={d}
-                                    onClick={() => setDuration(duration === d ? '' : d)}
-                                    className={`px-3 py-2 rounded-xl text-xs font-medium transition-all ${
-                                        duration === d
-                                            ? 'bg-primary text-primary-foreground shadow-soft'
-                                            : 'bg-secondary/60 text-secondary-foreground hover:bg-secondary'
-                                    }`}
-                                >
-                                    {d}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Vitals */}
-                <div className="card p-5">
-                    <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
-                        <Thermometer size={16} className="text-orange-500" /> Vital Signs
-                        <span className="text-xs font-normal text-muted-foreground">(Optional)</span>
-                    </h3>
-                    <div className="grid grid-cols-2 gap-3">
-                        {[
-                            { key: 'heartRate', label: 'Heart Rate', unit: 'bpm', placeholder: '72', type: 'number', icon: <Heart size={14} className="text-red-500" /> },
-                            { key: 'bloodPressure', label: 'Blood Pressure', unit: 'mmHg', placeholder: '120/80', type: 'text', icon: <Activity size={14} className="text-blue-500" /> },
-                            { key: 'temperature', label: 'Temperature', unit: '°F', placeholder: '98.6', type: 'number', icon: <Thermometer size={14} className="text-orange-500" /> },
-                            { key: 'oxygenSaturation', label: 'O₂ Saturation', unit: '%', placeholder: '98', type: 'number', icon: <Wind size={14} className="text-teal-500" /> },
-                        ].map(field => (
-                            <div key={field.key} className="relative">
-                                <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1.5">
-                                    {field.icon} {field.label}
-                                </label>
-                                <div className="relative">
-                                    <input
-                                        type={field.type}
-                                        step={field.key === 'temperature' ? '0.1' : undefined}
-                                        value={vitals[field.key as keyof typeof vitals]}
-                                        onChange={(e) => setVitals(v => ({ ...v, [field.key]: e.target.value }))}
-                                        placeholder={field.placeholder}
-                                        className="w-full pl-3 pr-12 py-2.5 rounded-xl border border-border bg-background text-foreground focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors text-sm"
-                                    />
-                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground font-medium">{field.unit}</span>
                                 </div>
                             </div>
-                        ))}
-                    </div>
-                </div>
 
-                {/* Additional notes */}
-                <div className="glass-card p-5">
-                    <FormTextarea
-                        label="Additional Clinical Notes"
-                        value={additionalNotes}
-                        onChange={(e) => setAdditionalNotes(e.target.value)}
-                        placeholder="Describe onset, triggers, alleviating factors, medications, or any relevant medical history..."
-                        rows={3}
-                    />
-                </div>
-
-                {/* Analyze button */}
-                <button
-                    onClick={handleAnalyze}
-                    disabled={isLoading || selectedSymptoms.length === 0}
-                    className="w-full btn-primary py-4 rounded-2xl flex items-center justify-center gap-3 text-base font-bold shadow-soft disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:shadow-soft-lg relative z-50"
-                >
-                    {isLoading ? (
-                        <>
-                            <Loader2 className="animate-spin" size={20} />
-                            <span>Analyzing {selectedSymptoms.length} symptom{selectedSymptoms.length !== 1 ? 's' : ''}...</span>
-                        </>
-                    ) : (
-                        <>
-                            <Brain size={20} />
-                            <span>Analyze Symptoms</span>
-                            {selectedSymptoms.length > 0 && (
-                                <span className="bg-white/20 text-xs font-bold px-2 py-0.5 rounded-full">
-                                    {selectedSymptoms.length}
-                                </span>
-                            )}
-                        </>
-                    )}
-                </button>
-
-                {/* Error */}
-                {error && <ErrorBanner message={error} onDismiss={() => setError('')} />}
-
-                {/* Results */}
-                {analysis && (
-                    <div className="space-y-4 animate-fade-in">
-                        {/* Urgency banner */}
-                        <div className={`rounded-2xl px-5 py-4 flex items-center gap-3 border ${getUrgencyColor(analysis.urgency)}`}>
-                            {getUrgencyIcon(analysis.urgency)}
-                            <div className="flex-1">
-                                <p className="font-bold text-sm uppercase tracking-wide">{analysis.urgency} Priority</p>
-                                <p className="text-xs opacity-80 mt-0.5">
-                                    {analysis.urgency === 'high' ? 'Immediate medical attention recommended' :
-                                     analysis.urgency === 'medium' ? 'Medical consultation advised' : 'Monitor and follow up as needed'}
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Analysis */}
-                        <div className="glass-card p-6">
-                            <div className="flex items-center gap-2 mb-4">
-                                <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-violet-500 rounded-lg flex items-center justify-center">
-                                    <Brain size={16} className="text-white" />
-                                </div>
-                                <h2 className="text-lg font-bold text-foreground">AI Analysis</h2>
-                            </div>
-                            <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">{analysis.analysis}</p>
-                        </div>
-
-                        {/* Suggestions */}
-                        {analysis.suggestions.length > 0 && (
-                            <div className="glass-card p-6">
-                                <h3 className="text-sm font-bold text-foreground mb-3 flex items-center gap-2">
-                                    <Stethoscope size={16} className="text-emerald-500" /> Recommended Actions
+                            {/* Vitals */}
+                            <div className="card p-4">
+                                <h3 className="text-xs font-semibold text-foreground mb-3 flex items-center gap-1.5 uppercase tracking-wider text-muted-foreground">
+                                    <Thermometer size={14} className="text-orange-500" /> Vital Signs
+                                    <span className="text-[10px] font-normal text-muted-foreground lowercase">(optional)</span>
                                 </h3>
-                                <div className="space-y-2">
-                                    {analysis.suggestions.map((suggestion, i) => (
-                                        <div key={i} className="flex items-start gap-3 p-3 bg-muted/40 rounded-xl">
-                                            <div className="w-6 h-6 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                                                <CheckCircle2 className="text-emerald-600 dark:text-emerald-400" size={13} />
+                                <div className="grid grid-cols-2 gap-3">
+                                    {[
+                                        { key: 'heartRate', label: 'Heart Rate', unit: 'bpm', placeholder: '72', type: 'number', icon: <Heart size={13} className="text-red-500" /> },
+                                        { key: 'bloodPressure', label: 'Blood Pressure', unit: 'mmHg', placeholder: '120/80', type: 'text', icon: <Activity size={13} className="text-blue-500" /> },
+                                        { key: 'temperature', label: 'Temperature', unit: '°F', placeholder: '98.6', type: 'number', icon: <Thermometer size={13} className="text-orange-500" /> },
+                                        { key: 'oxygenSaturation', label: 'O₂ Saturation', unit: '%', placeholder: '98', type: 'number', icon: <Wind size={13} className="text-teal-500" /> },
+                                    ].map(field => (
+                                        <div key={field.key} className="relative">
+                                            <label className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground mb-1">
+                                                {field.icon} {field.label}
+                                            </label>
+                                            <div className="relative">
+                                                <input
+                                                    type={field.type}
+                                                    step={field.key === 'temperature' ? '0.1' : undefined}
+                                                    value={vitals[field.key as keyof typeof vitals]}
+                                                    onChange={(e) => setVitals(v => ({ ...v, [field.key]: e.target.value }))}
+                                                    placeholder={field.placeholder}
+                                                    className="w-full pl-3 pr-10 py-2 rounded-xl border border-border bg-background text-foreground focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors text-xs"
+                                                />
+                                                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground font-medium">{field.unit}</span>
                                             </div>
-                                            <p className="text-sm text-foreground">{suggestion}</p>
                                         </div>
                                     ))}
                                 </div>
                             </div>
-                        )}
+                        </div>
 
-                        {/* Disclaimer */}
-                        <div className="bg-muted/30 rounded-2xl p-4 border border-border">
-                            <p className="text-xs text-muted-foreground italic leading-relaxed flex items-start gap-2">
-                                <Shield size={14} className="flex-shrink-0 mt-0.5" />
-                                {analysis.disclaimer}
-                            </p>
+                        {/* Right Side: Analysis Actions & Live Results (5 cols) */}
+                        <div className="lg:col-span-5 space-y-4 lg:sticky lg:top-20 self-start">
+                            {/* Selected symptoms summary */}
+                            <div className="glass-card p-4">
+                                <div className="flex items-center justify-between mb-2.5">
+                                    <h3 className="text-xs font-semibold text-foreground uppercase tracking-wider text-muted-foreground">Selected Symptoms ({selectedSymptoms.length})</h3>
+                                    {selectedSymptoms.length > 0 && (
+                                        <button onClick={handleReset} className="text-xs text-muted-foreground hover:text-destructive transition-colors">
+                                            Clear all
+                                        </button>
+                                    )}
+                                </div>
+                                {selectedSymptoms.length > 0 ? (
+                                    <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto scrollbar-thin pr-1">
+                                        {selectedSymptoms.map(s => (
+                                            <button
+                                                key={s}
+                                                onClick={() => toggleSymptom(s)}
+                                                className="px-2.5 py-1 rounded-lg text-xs font-medium bg-primary/10 text-primary border border-primary/20 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20 transition-all"
+                                            >
+                                                {s} ×
+                                            </button>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p className="text-xs text-muted-foreground py-2 italic">No symptoms selected yet. Pick symptoms from the regions on the left.</p>
+                                )}
+                            </div>
+
+                            {/* Additional notes */}
+                            <div className="glass-card p-4">
+                                <FormTextarea
+                                    label="Clinical Notes"
+                                    value={additionalNotes}
+                                    onChange={(e) => setAdditionalNotes(e.target.value)}
+                                    placeholder="Describe onset, triggers, alleviating factors..."
+                                    rows={2}
+                                />
+                            </div>
+
+                            {/* Analyze button */}
+                            <button
+                                onClick={handleAnalyze}
+                                disabled={isLoading || selectedSymptoms.length === 0}
+                                className="w-full btn-primary py-3.5 rounded-2xl flex items-center justify-center gap-2.5 text-sm font-bold shadow-soft disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:shadow-soft-lg"
+                            >
+                                {isLoading ? (
+                                    <>
+                                        <Loader2 className="animate-spin" size={18} />
+                                        <span>Analyzing symptoms...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Brain size={18} />
+                                        <span>Analyze Symptoms</span>
+                                        {selectedSymptoms.length > 0 && (
+                                            <span className="bg-white/20 text-xs font-bold px-2 py-0.5 rounded-full">
+                                                {selectedSymptoms.length}
+                                            </span>
+                                        )}
+                                    </>
+                                )}
+                            </button>
+
+                            {/* Error */}
+                            {error && <ErrorBanner message={error} onDismiss={() => setError('')} />}
+
+                            {/* Results */}
+                            {analysis && (
+                                <div className="space-y-3 animate-fade-in">
+                                    {/* Urgency banner */}
+                                    <div className={`rounded-2xl px-4 py-3 flex items-center gap-3 border ${getUrgencyColor(analysis.urgency)}`}>
+                                        {getUrgencyIcon(analysis.urgency)}
+                                        <div className="flex-1">
+                                            <p className="font-bold text-xs uppercase tracking-wide">{analysis.urgency} Priority</p>
+                                            <p className="text-[11px] opacity-80 mt-0.5">
+                                                {analysis.urgency === 'high' ? 'Immediate medical attention recommended' :
+                                                 analysis.urgency === 'medium' ? 'Medical consultation advised' : 'Monitor and follow up as needed'}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Analysis */}
+                                    <div className="glass-card p-4">
+                                        <div className="flex items-center gap-2 mb-2.5">
+                                            <div className="w-7 h-7 bg-gradient-to-br from-indigo-500 to-violet-500 rounded-lg flex items-center justify-center">
+                                                <Brain size={14} className="text-white" />
+                                            </div>
+                                            <h2 className="text-sm font-bold text-foreground">AI Assessment</h2>
+                                        </div>
+                                        <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed max-h-60 overflow-y-auto scrollbar-thin pr-1">{analysis.analysis}</p>
+                                    </div>
+
+                                    {/* Suggestions */}
+                                    {analysis.suggestions.length > 0 && (
+                                        <div className="glass-card p-4">
+                                            <h3 className="text-xs font-bold text-foreground mb-2 flex items-center gap-1.5">
+                                                <Stethoscope size={14} className="text-emerald-500" /> Recommended Actions
+                                            </h3>
+                                            <div className="space-y-1.5">
+                                                {analysis.suggestions.map((suggestion, i) => (
+                                                    <div key={i} className="flex items-start gap-2 p-2 bg-muted/40 rounded-xl text-xs">
+                                                        <CheckCircle2 className="text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" size={12} />
+                                                        <span className="text-foreground">{suggestion}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Disclaimer */}
+                                    <div className="bg-muted/30 rounded-2xl p-3 border border-border">
+                                        <p className="text-[10px] text-muted-foreground italic leading-relaxed flex items-start gap-1.5">
+                                            <Shield size={12} className="flex-shrink-0 mt-0.5" />
+                                            {analysis.disclaimer}
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
-                )}
-                
-                {/* Mobile Bottom Spacer - ensures content is not hidden behind the fixed bottom floating navbar */}
-                <div className="h-[80px] lg:hidden w-full flex-shrink-0" aria-hidden="true" />
-                
+
+                    {/* Mobile Bottom Spacer */}
+                    <div className="h-[80px] lg:hidden w-full flex-shrink-0" aria-hidden="true" />
                 </div>
             </main>
         </div>

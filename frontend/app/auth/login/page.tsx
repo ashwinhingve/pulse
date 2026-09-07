@@ -80,6 +80,34 @@ function LoginForm() {
             <div className="mb-6 animate-fade-in">
                 <h2 className="text-lg font-bold text-white mb-1">Welcome back</h2>
                 <p className="text-sm text-slate-400">Sign in to access your clinical dashboard</p>
+
+                {/* Quick-fill Demo Account selector */}
+                <div className="mt-3.5 pt-3 border-t border-slate-800/80">
+                    <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Quick-Fill Demo Account:</p>
+                    <div className="flex flex-wrap gap-1.5">
+                        <button
+                            type="button"
+                            onClick={() => { setUsername('admin'); setPassword('Demo123!'); }}
+                            className="px-2.5 py-1 rounded-lg bg-red-500/10 border border-red-500/30 text-red-300 text-xs font-medium hover:bg-red-500/20 transition-all active:scale-95"
+                        >
+                            🛡️ Admin
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => { setUsername('maj.harris'); setPassword('Demo123!'); }}
+                            className="px-2.5 py-1 rounded-lg bg-teal-500/10 border border-teal-500/30 text-teal-300 text-xs font-medium hover:bg-teal-500/20 transition-all active:scale-95"
+                        >
+                            🪖 Maj. Harris
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => { setUsername('dr.williams'); setPassword('Demo123!'); }}
+                            className="px-2.5 py-1 rounded-lg bg-blue-500/10 border border-blue-500/30 text-blue-300 text-xs font-medium hover:bg-blue-500/20 transition-all active:scale-95"
+                        >
+                            🩺 Dr. Williams
+                        </button>
+                    </div>
+                </div>
             </div>
 
             {/* Just-registered banner */}

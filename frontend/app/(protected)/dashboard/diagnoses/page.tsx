@@ -138,13 +138,13 @@ export default function DiagnosesPage() {
             />
 
             <main className="flex-1 w-full">
-                <div className="container-app space-y-4 pb-24 lg:pb-8 max-w-7xl animate-fade-in">
+                <div className="container-app space-y-4 pb-24 lg:pb-8 max-w-[1600px] animate-fade-in">
                     {error && <ErrorBanner message={error} onDismiss={() => setError('')} />}
 
                     <SearchBar value={search} onChange={setSearch} placeholder="Search by disease, ICD code, or status..." />
 
                     {loading ? (
-                        <LoadingSkeleton variant="row" count={5} />
+                        <LoadingSkeleton variant="card" count={6} />
                     ) : filtered.length === 0 ? (
                         <EmptyState
                             icon={ClipboardList}
@@ -157,7 +157,7 @@ export default function DiagnosesPage() {
                             ) : undefined}
                         />
                     ) : (
-                        <div className="space-y-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {filtered.map((diagnosis, i) => {
                                 const statusInfo = STATUS_MAP[diagnosis.status] || STATUS_MAP.preliminary;
                                 return (

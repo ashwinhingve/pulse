@@ -239,10 +239,10 @@ export default function ChatPage() {
     );
 
     return (
-        <div className="min-h-screen bg-background flex flex-col">
+        <div className="h-[calc(100vh-4rem)] lg:h-screen bg-background flex flex-col overflow-hidden pb-16 lg:pb-0">
             {/* Header */}
-            <header className="glass border-b border-border sticky top-0 z-30">
-                <div className="max-w-6xl mx-auto px-4 h-16 flex items-center gap-4">
+            <header className="glass border-b border-border sticky top-0 z-30 flex-shrink-0">
+                <div className="max-w-[1600px] mx-auto px-4 h-16 flex items-center gap-4">
                     <button
                         onClick={() => currentConversation ? selectConversation(null) : router.back()}
                         className="p-2 hover:bg-muted rounded-full"
@@ -290,13 +290,13 @@ export default function ChatPage() {
 
             {/* Connection status banner */}
             {!isConnected && (
-                <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2 flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400">
+                <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2 flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400 flex-shrink-0">
                     <Loader2 size={12} className="animate-spin" />
                     Reconnecting to secure channel...
                 </div>
             )}
 
-            <main className="flex-1 max-w-6xl w-full mx-auto flex overflow-hidden">
+            <main className="flex-1 max-w-[1600px] w-full mx-auto flex overflow-hidden">
                 {/* Conversation List */}
                 <div className={`w-full md:w-80 bg-card border-r border-border flex-shrink-0 overflow-y-auto ${currentConversation ? 'hidden md:block' : ''}`}>
                     {isLoading ? (

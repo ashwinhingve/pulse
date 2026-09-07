@@ -8,7 +8,7 @@ import {
     MessageSquare, Bot, BookOpen, Shield, LogOut,
     ChevronLeft, ChevronRight, X, Lock,
     Users, Stethoscope, ClipboardList, Menu,
-    HeartPulse, Info,
+    HeartPulse, Info, ClipboardCheck,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import {
@@ -18,6 +18,7 @@ import { isMobileBuild, mobileLogout } from '@/lib/mobile-auth';
 import EmergencyButton from '@/components/EmergencyButton';
 import AnimatedBackground from '@/components/ui/AnimatedBackground';
 import Logo, { LogoIcon } from '@/components/ui/Logo';
+import ThemeToggle from '@/components/ui/ThemeToggle';
 
 /* ── Sidebar Context ─────────────────────────────────────── */
 
@@ -62,6 +63,7 @@ const NAV_ITEMS: NavItem[] = [
     { href: '/dashboard/assistant', label: 'AI Assistant', icon: Bot, roles: [UserRole.ARMY_MEDICAL_OFFICER, UserRole.PUBLIC_MEDICAL_OFFICIAL, UserRole.ADMIN], section: 'Tools' },
     { href: '/dashboard/education', label: 'Medical Library', icon: BookOpen, roles: [UserRole.ARMY_MEDICAL_OFFICER, UserRole.PUBLIC_MEDICAL_OFFICIAL, UserRole.ADMIN], section: 'Tools' },
     { href: '/dashboard/about', label: 'About & Credits', icon: Info, roles: [UserRole.ARMY_MEDICAL_OFFICER, UserRole.PUBLIC_MEDICAL_OFFICIAL, UserRole.ADMIN], section: 'System' },
+    { href: '/dashboard/audit', label: 'Audit Logs', icon: ClipboardCheck, roles: [UserRole.ADMIN], section: 'System' },
     { href: '/admin', label: 'Admin Panel', icon: Shield, roles: [UserRole.ADMIN], section: 'System' },
 ];
 
@@ -252,12 +254,13 @@ function SidebarNav({ collapsed = false, mobileMode = false, onClose }: SidebarN
                                 </div>
                             </div>
                         </Link>
+                        <ThemeToggle compact />
                         <button
                             onClick={(e) => {
                                 e.preventDefault();
                                 handleLogout();
                             }}
-                            className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                            className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all"
                             title="Sign out"
                         >
                             <LogOut size={16} />
@@ -265,6 +268,7 @@ function SidebarNav({ collapsed = false, mobileMode = false, onClose }: SidebarN
                     </div>
                 ) : (
                     <div className="flex flex-col items-center gap-2">
+                        <ThemeToggle compact />
                         <div className="h-9 w-9 bg-gradient-to-br from-medical-teal-400 to-medical-blue-500 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-soft ring-2 ring-primary/10">
                             {initials}
                         </div>

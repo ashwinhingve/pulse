@@ -105,42 +105,45 @@ export default function ProfilePage() {
             />
 
             <main className="flex-1 w-full">
-                <div className="container-app pt-6 pb-24 lg:pb-6 space-y-6 animate-fade-in">
-                {/* Profile Header Card */}
-                <div className="glass-card p-6 overflow-hidden relative">
-                    {/* Background gradient */}
-                    <div className={`absolute top-0 left-0 right-0 h-24 bg-gradient-to-r ${getAvatarGradient()} opacity-10`} />
+                <div className="container-app pt-6 pb-24 lg:pb-6 space-y-6 max-w-[1600px] animate-fade-in">
+                    {/* Profile Header Card */}
+                    <div className="glass-card p-6 overflow-hidden relative">
+                        {/* Background gradient */}
+                        <div className={`absolute top-0 left-0 right-0 h-24 bg-gradient-to-r ${getAvatarGradient()} opacity-10`} />
 
-                    <div className="relative flex flex-col sm:flex-row items-center sm:items-start gap-4">
-                        {/* Avatar */}
-                        <div className={`w-20 h-20 bg-gradient-to-br ${getAvatarGradient()} rounded-2xl flex items-center justify-center text-white text-3xl font-bold shadow-lg`}>
-                            {displayName.charAt(0).toUpperCase()}
-                        </div>
+                        <div className="relative flex flex-col sm:flex-row items-center sm:items-start gap-4">
+                            {/* Avatar */}
+                            <div className={`w-20 h-20 bg-gradient-to-br ${getAvatarGradient()} rounded-2xl flex items-center justify-center text-white text-3xl font-bold shadow-lg`}>
+                                {displayName.charAt(0).toUpperCase()}
+                            </div>
 
-                        {/* Info */}
-                        <div className="flex-1 text-center sm:text-left">
-                            <h1 className="text-2xl font-bold text-foreground">{displayName}</h1>
-                            <p className="text-muted-foreground">@{username}</p>
+                            {/* Info */}
+                            <div className="flex-1 text-center sm:text-left">
+                                <h1 className="text-2xl font-bold text-foreground">{displayName}</h1>
+                                <p className="text-muted-foreground">@{username}</p>
 
-                            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mt-3">
-                                <span className={`px-3 py-1 text-xs font-medium rounded-full border ${getRoleBadgeStyle()}`}>
-                                    {userRole ? ROLE_DISPLAY_NAMES[userRole] : 'User'}
-                                </span>
-                                <span className={`px-3 py-1 text-xs font-medium rounded-full border ${getClearanceStyle()}`}>
-                                    {CLEARANCE_NAMES[clearanceLevel] || 'UNCLASSIFIED'}
-                                </span>
+                                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mt-3">
+                                    <span className={`px-3 py-1 text-xs font-medium rounded-full border ${getRoleBadgeStyle()}`}>
+                                        {userRole ? ROLE_DISPLAY_NAMES[userRole] : 'User'}
+                                    </span>
+                                    <span className={`px-3 py-1 text-xs font-medium rounded-full border ${getClearanceStyle()}`}>
+                                        {CLEARANCE_NAMES[clearanceLevel] || 'UNCLASSIFIED'}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Secure Badge */}
+                            <div className="hidden sm:flex items-center gap-2 px-3 py-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 rounded-xl text-sm">
+                                <Shield size={16} />
+                                <span className="font-medium">Verified</span>
                             </div>
                         </div>
-
-                        {/* Secure Badge */}
-                        <div className="hidden sm:flex items-center gap-2 px-3 py-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 rounded-xl text-sm">
-                            <Shield size={16} />
-                            <span className="font-medium">Verified</span>
-                        </div>
                     </div>
-                </div>
 
-                {/* Profile Details */}
+                    {/* 12-Column Grid Layout */}
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                        {/* Left Side: Profile Details (7 cols) */}
+                        <div className="lg:col-span-7 space-y-6">
                 <div className="glass-card">
                     <div className="p-4 border-b border-border">
                         <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
@@ -243,8 +246,11 @@ export default function ProfilePage() {
                         )}
                     </div>
                 </div>
+            </div>
 
-                {/* Security Section */}
+                        {/* Right Side: Security & Preferences (5 cols) */}
+                        <div className="lg:col-span-5 space-y-6">
+                            {/* Security Section */}
                 <div className="glass-card">
                     <div className="p-4 border-b border-border">
                         <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
@@ -335,23 +341,24 @@ export default function ProfilePage() {
                     className="w-full glass-card p-4 flex items-center justify-center gap-3 text-destructive hover:bg-destructive/10 transition-colors"
                 >
                     <LogOut size={20} />
-                    <span className="font-medium">Sign Out</span>
                 </button>
+            </div>
+        </div>
 
-                {/* Version & Credits */}
-                <div className="text-center py-4 space-y-2">
-                    <button 
-                        onClick={() => setShowCredits(true)}
-                        className="text-xs font-semibold text-primary hover:underline"
-                    >
-                        About & Credits
-                    </button>
-                    <p className="text-xs text-muted-foreground font-mono">
-                        PulseLogic v1.0.0 MVP
-                    </p>
-                </div>
-                {/* Mobile Bottom Spacer */}
-                <div className="h-[80px] lg:hidden w-full flex-shrink-0" aria-hidden="true" />
+                    {/* Version & Credits */}
+                    <div className="text-center py-4 space-y-2">
+                        <button 
+                            onClick={() => setShowCredits(true)}
+                            className="text-xs font-semibold text-primary hover:underline"
+                        >
+                            About & Credits
+                        </button>
+                        <p className="text-xs text-muted-foreground font-mono">
+                            PulseLogic v1.0.0 MVP
+                        </p>
+                    </div>
+                    {/* Mobile Bottom Spacer */}
+                    <div className="h-[80px] lg:hidden w-full flex-shrink-0" aria-hidden="true" />
                 </div>
             </main>
 

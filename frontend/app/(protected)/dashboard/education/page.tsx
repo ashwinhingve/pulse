@@ -194,7 +194,7 @@ const LIBRARY_BOOKS: LibraryBook[] = [
     },
 ];
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
 // ─── Formatted Content Renderer ──────────────────────────────────────────────
 
@@ -217,7 +217,7 @@ const FormattedClinicalData: React.FC<{ text: string }> = ({ text }) => {
             elements.push(
                 <div
                     key={idx}
-                    className="flex gap-2 items-start py-1.5 px-1.5 bg-white dark:bg-slate-950/20 rounded-xl my-0.5"
+                    className="flex gap-2 items-start py-1.5 px-1.5 bg-card rounded-xl my-0.5"
                 >
                     <div className="w-1 h-1 bg-primary rounded-full mt-1.5 shrink-0" />
                     <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 font-medium">
@@ -448,7 +448,7 @@ function BookViewer({ book, onBack }: { book: LibraryBook; onBack: () => void })
                                         className={`snap-start whitespace-nowrap px-5 py-2.5 rounded-xl text-[8px] sm:text-[10px] font-black uppercase tracking-widest transition-all border shrink-0 ${
                                             selectedCategory === cat
                                                 ? 'text-white border-transparent shadow-lg'
-                                                : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-100 dark:border-slate-800'
+                                                : 'bg-card text-muted-foreground border-border'
                                         }`}
                                         style={selectedCategory === cat ? { background: book.accentColor } : {}}
                                     >
@@ -464,7 +464,7 @@ function BookViewer({ book, onBack }: { book: LibraryBook; onBack: () => void })
                                         className="glass-card p-4 rounded-2xl hover:shadow-md transition-all text-left flex items-start gap-4 group"
                                     >
                                         <div
-                                            className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-50 dark:bg-slate-800 rounded-xl flex items-center justify-center text-slate-400 transition-all shrink-0"
+                                            className="w-10 h-10 sm:w-12 sm:h-12 bg-muted rounded-xl flex items-center justify-center text-muted-foreground transition-all shrink-0"
                                             style={{ ['--hover-bg' as any]: book.accentColor }}
                                         >
                                             <ArticleIcon icon={article.icon} size={18} className="group-hover:text-white transition-colors" />
@@ -514,7 +514,7 @@ function BookViewer({ book, onBack }: { book: LibraryBook; onBack: () => void })
                                 {selectedArticle.title}
                             </h2>
                         </div>
-                        <div className="p-4 bg-slate-50 dark:bg-slate-950/40 rounded-2xl border-l-4 text-slate-600 dark:text-slate-400 text-[10px] sm:text-xs italic font-medium leading-relaxed" style={{ borderColor: book.accentColor }}>
+                        <div className="p-4 bg-muted rounded-2xl border-l-4 text-muted-foreground text-[10px] sm:text-xs italic font-medium leading-relaxed" style={{ borderColor: book.accentColor }}>
                             {selectedArticle.summary}
                         </div>
                         <div className="prose prose-slate dark:prose-invert max-w-none">
@@ -527,7 +527,7 @@ function BookViewer({ book, onBack }: { book: LibraryBook; onBack: () => void })
             {/* Chat */}
             {!selectedArticle && !isSearchActive && (
                 <div className="glass-card rounded-[1.5rem] shadow-xl overflow-hidden flex flex-col h-[380px] transition-all">
-                    <div className="bg-slate-900 dark:bg-slate-950 p-4 text-white flex items-center justify-between shrink-0">
+                    <div className="bg-card border-b border-border p-4 text-card-foreground flex items-center justify-between shrink-0">
                         <div className="flex items-center gap-3">
                             <div
                                 className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
@@ -554,7 +554,7 @@ function BookViewer({ book, onBack }: { book: LibraryBook; onBack: () => void })
                             <span className="text-[9px] font-bold uppercase tracking-wider">Anonymized</span>
                         </div>
                     </div>
-                    <div ref={chatScrollRef} className="flex-grow overflow-y-auto p-4 space-y-4 bg-slate-50 dark:bg-slate-950 scroll-smooth">
+                    <div ref={chatScrollRef} className="flex-grow overflow-y-auto p-4 space-y-4 bg-background scroll-smooth">
                         {chatMessages.length === 0 && (
                             <div className="h-full flex flex-col items-center justify-center text-center opacity-30 px-6">
                                 <Stethoscope size={32} className="text-emerald-600 mb-3" />
@@ -568,7 +568,7 @@ function BookViewer({ book, onBack }: { book: LibraryBook; onBack: () => void })
                                     className={`max-w-[90%] p-3 rounded-2xl shadow-sm text-[11px] ${
                                         msg.role === 'user'
                                             ? 'text-white rounded-tr-none font-bold'
-                                            : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 rounded-tl-none border border-slate-100 dark:border-slate-800'
+                                            : 'bg-card text-foreground rounded-tl-none border border-border'
                                     }`}
                                     style={msg.role === 'user' ? { background: book.accentColor } : {}}
                                 >
@@ -578,7 +578,7 @@ function BookViewer({ book, onBack }: { book: LibraryBook; onBack: () => void })
                         ))}
                         {loadingChat && (
                             <div className="flex justify-start">
-                                <div className="bg-white dark:bg-slate-900 px-4 py-2.5 rounded-2xl rounded-tl-none shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col gap-2">
+                                <div className="bg-card px-4 py-2.5 rounded-2xl rounded-tl-none shadow-sm border border-border flex flex-col gap-2">
                                     <div className="flex gap-1 items-center">
                                         <Loader2 size={12} className="animate-spin text-emerald-500" />
                                         <span className="text-[7px] font-black text-emerald-500 uppercase tracking-widest animate-pulse">Syncing Logic...</span>
@@ -587,7 +587,7 @@ function BookViewer({ book, onBack }: { book: LibraryBook; onBack: () => void })
                             </div>
                         )}
                     </div>
-                    <div className="p-3 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex gap-2 shrink-0">
+                    <div className="p-3 border-t border-border bg-card flex gap-2 shrink-0">
                         <input
                             type="text"
                             value={chatInput}
@@ -595,7 +595,7 @@ function BookViewer({ book, onBack }: { book: LibraryBook; onBack: () => void })
                             onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
                             placeholder="Query clinical library..."
                             disabled={loadingChat}
-                            className="flex-grow bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl px-4 py-2.5 text-[11px] font-bold focus:ring-1 focus:ring-emerald-500 outline-none transition-all dark:text-white shadow-inner"
+                            className="flex-grow bg-muted border border-border rounded-xl px-4 py-2.5 text-[11px] font-bold focus:ring-1 focus:ring-emerald-500 outline-none transition-all text-foreground shadow-inner"
                         />
                         <button
                             onClick={handleSendMessage}
@@ -644,7 +644,7 @@ export default function HealthEducationPage() {
     if (activeBook) {
         return (
             <div className="min-h-screen bg-background">
-                <div className="max-w-3xl mx-auto px-4 pb-24 space-y-4 sm:space-y-6">
+                <div className="max-w-[1600px] mx-auto px-4 pb-24 space-y-4 sm:space-y-6">
                     <BookViewer book={activeBook} onBack={() => setActiveBook(null)} />
                 </div>
             </div>
@@ -653,7 +653,7 @@ export default function HealthEducationPage() {
 
     return (
         <div className="min-h-screen bg-background">
-            <div className="max-w-3xl mx-auto px-4 pb-24 space-y-6 sm:space-y-8 animate-fade-in">
+            <div className="max-w-[1600px] mx-auto px-4 pb-24 space-y-6 sm:space-y-8 animate-fade-in">
 
                 {/* Hero Header */}
                 <div className="bg-gradient-to-br from-slate-900 to-slate-800 dark:from-slate-950 dark:to-slate-900 rounded-b-none sm:rounded-b-[2rem] -mx-4 px-6 pt-6 pb-8 text-white shadow-xl relative overflow-hidden">
@@ -707,7 +707,7 @@ export default function HealthEducationPage() {
                                                     {book.title}
                                                 </h3>
                                                 {book.comingSoon && (
-                                                    <span className="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-400 rounded-full">
+                                                    <span className="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 bg-muted text-muted-foreground rounded-full">
                                                         Soon
                                                     </span>
                                                 )}
@@ -727,9 +727,9 @@ export default function HealthEducationPage() {
                         })}
 
                         {/* Add New Placeholder */}
-                        <div className="glass-card p-5 rounded-2xl text-left relative overflow-hidden border-2 border-dashed border-slate-200 dark:border-slate-700 opacity-50">
+                        <div className="glass-card p-5 rounded-2xl text-left relative overflow-hidden border-2 border-dashed border-border opacity-50">
                             <div className="flex items-center gap-4 mt-2">
-                                <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 flex-shrink-0">
+                                <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center text-muted-foreground flex-shrink-0">
                                     <PlusCircle size={22} />
                                 </div>
                                 <div>

@@ -10,9 +10,9 @@ async function bootstrap() {
     });
 
     const configService = app.get(ConfigService);
-    const port = configService.get<number>('PORT', 3001);
+    const port = configService.get<number>('PORT', 4000);
     const apiPrefix = configService.get<string>('API_PREFIX', 'api');
-    const corsOrigin = configService.get<string>('CORS_ORIGIN', 'http://localhost:3000');
+    const corsOrigin = configService.get<string>('CORS_ORIGIN', 'http://localhost:4050');
 
     // Security headers
     app.use(
@@ -23,7 +23,7 @@ async function bootstrap() {
                     scriptSrc: ["'self'"],
                     styleSrc: ["'self'", "'unsafe-inline'"],
                     imgSrc: ["'self'", 'data:', 'https:'],
-                    connectSrc: ["'self'", 'http://localhost:3000', 'ws://localhost:3000', 'http://localhost:3001', 'ws://localhost:3001'],
+                    connectSrc: ["'self'", 'http://localhost:4050', 'ws://localhost:4050', 'http://localhost:4000', 'ws://localhost:4000'],
                     fontSrc: ["'self'"],
                     objectSrc: ["'none'"],
                     mediaSrc: ["'self'"],

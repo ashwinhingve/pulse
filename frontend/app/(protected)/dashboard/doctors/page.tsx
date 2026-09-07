@@ -119,13 +119,13 @@ export default function DoctorsPage() {
             />
 
             <main className="flex-1 w-full">
-                <div className="container-app space-y-4 pb-24 lg:pb-8 max-w-7xl animate-fade-in">
+                <div className="container-app space-y-4 pb-24 lg:pb-8 max-w-[1600px] animate-fade-in">
                     {error && <ErrorBanner message={error} onDismiss={() => setError('')} />}
 
                     <SearchBar value={search} onChange={setSearch} placeholder="Search by name, specialization, or department..." />
 
                     {loading ? (
-                        <LoadingSkeleton variant="card" count={6} />
+                        <LoadingSkeleton variant="card" count={8} />
                     ) : filtered.length === 0 ? (
                         <EmptyState
                             icon={Stethoscope}
@@ -138,7 +138,7 @@ export default function DoctorsPage() {
                             ) : undefined}
                         />
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
                             {filtered.map((doctor, i) => (
                                 <motion.div
                                     key={doctor.id}

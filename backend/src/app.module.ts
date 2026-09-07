@@ -17,6 +17,7 @@ import { DiagnosesModule } from './diagnoses/diagnoses.module';
 import { ReportsModule } from './reports/reports.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { DocumentsModule } from './documents/documents.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { AuditInterceptor } from './audit/interceptors/audit.interceptor';
 
 @Module({
@@ -86,6 +87,7 @@ import { AuditInterceptor } from './audit/interceptors/audit.interceptor';
         ReportsModule,
         DashboardModule,
         DocumentsModule,
+        NotificationsModule,
     ],
     providers: [
         // Global audit interceptor

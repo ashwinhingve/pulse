@@ -13,7 +13,7 @@ export default function AboutPage() {
             />
 
             <main className="flex-1 w-full flex flex-col items-center">
-                <div className="container-app pt-6 pb-24 lg:pb-6 space-y-6 max-w-3xl animate-fade-in">
+                <div className="container-app pt-6 pb-24 lg:pb-6 space-y-6 max-w-[1600px] animate-fade-in">
                     
                     {/* App Summary Card */}
                     <div className="glass-card p-6 lg:p-8 text-center space-y-4">
