@@ -2,7 +2,7 @@
 
 import { ReactNode } from 'react';
 import Link from 'next/link';
-import { Shield, Lock, Activity, Heart, Fingerprint, Wifi } from 'lucide-react';
+import { Shield, Lock, Activity, Heart, Fingerprint, Wifi, ArrowLeft } from 'lucide-react';
 import { LogoIcon } from '@/components/ui/Logo';
 import ThemeToggle from '@/components/ui/ThemeToggle';
 
@@ -23,7 +23,7 @@ export default function AuthLayout({
         <div className="min-h-screen flex safe-all" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
             {/* ── Decorative side panel (lg+) ───────────────── */}
             {showIllustration && (
-                <div className="hidden lg:flex lg:w-[45%] xl:w-[50%] relative overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 items-center justify-center">
+                <div className="hidden lg:flex lg:w-[45%] xl:w-[50%] relative overflow-hidden bg-gradient-to-br from-slate-100 via-slate-50 to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 items-center justify-center">
                     {/* Animated blobs */}
                     <div className="absolute inset-0 overflow-hidden">
                         <div className="absolute -top-32 -left-32 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-float-slow" />
@@ -48,7 +48,7 @@ export default function AuthLayout({
                             <LogoIcon size={56} />
                         </div>
 
-                        <h2 className="font-display text-3xl xl:text-4xl font-bold text-white mb-4 tracking-tight">
+                        <h2 className="font-display text-3xl xl:text-4xl font-bold text-foreground dark:text-white mb-4 tracking-tight">
                             Secure Medical
                             <br />
                             <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
@@ -56,7 +56,7 @@ export default function AuthLayout({
                             </span>
                         </h2>
 
-                        <p className="text-slate-400 text-sm leading-relaxed mb-10">
+                        <p className="text-muted-foreground dark:text-slate-400 text-sm leading-relaxed mb-10">
                             Military-grade healthcare intelligence platform with
                             real-time analytics, AI-powered diagnostics, and
                             end-to-end encrypted communication.
@@ -71,7 +71,7 @@ export default function AuthLayout({
                             ].map(({ icon: Icon, label }) => (
                                 <div
                                     key={label}
-                                    className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-slate-300 text-xs font-medium backdrop-blur-sm"
+                                    className="flex items-center gap-2 px-4 py-2 rounded-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-foreground/80 dark:text-slate-300 text-xs font-medium backdrop-blur-sm"
                                 >
                                     <Icon size={13} className="text-primary" />
                                     {label}
@@ -81,7 +81,7 @@ export default function AuthLayout({
                     </div>
 
                     {/* Bottom attribution */}
-                    <p className="absolute bottom-6 left-0 right-0 text-center text-[10px] text-slate-600 font-mono tracking-wider">
+                    <p className="absolute bottom-6 left-0 right-0 text-center text-[10px] text-muted-foreground/80 dark:text-slate-600 font-mono tracking-wider">
                         PULSELOGIC DEFENSE MEDICAL SYSTEM
                     </p>
                 </div>
@@ -90,7 +90,7 @@ export default function AuthLayout({
             {/* ── Main content area ──────────────────────────── */}
             <div className="flex-1 flex flex-col relative overflow-hidden">
                 {/* Background */}
-                <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-[#0a0f1a] to-slate-950" />
+                <div className="absolute inset-0 bg-gradient-to-br from-background via-muted/30 to-background dark:from-slate-950 dark:via-[#0a0f1a] dark:to-slate-950" />
 
                 {/* Subtle animated radials */}
                 <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/[0.03] rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
@@ -108,9 +108,15 @@ export default function AuthLayout({
 
                 {/* Scrollable content */}
                 <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 py-8 sm:px-6 md:py-12 overflow-y-auto scrollbar-thin">
-                    {/* Top right theme toggle */}
-                    <div className="absolute top-4 right-4 z-20">
-                        <ThemeToggle compact />
+                    {/* Top navigation */}
+                    <div className="absolute top-4 left-4 right-4 z-20 flex justify-between items-center pointer-events-none">
+                        <Link href="/" className="pointer-events-auto flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors">
+                            <ArrowLeft size={16} />
+                            <span>Back to Home</span>
+                        </Link>
+                        <div className="pointer-events-auto">
+                            <ThemeToggle compact />
+                        </div>
                     </div>
                     {/* Branding */}
                     <div className="mb-8 text-center animate-fade-in">
@@ -121,16 +127,16 @@ export default function AuthLayout({
                                     <LogoIcon size={36} />
                                 </div>
                                 {/* Active indicator */}
-                                <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 bg-emerald-500 rounded-lg flex items-center justify-center shadow-lg ring-2 ring-slate-950">
+                                <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 bg-emerald-500 rounded-lg flex items-center justify-center shadow-lg ring-2 ring-background dark:ring-slate-950">
                                     <Lock className="w-2.5 h-2.5 text-white" />
                                 </div>
                             </div>
                         </Link>
 
-                        <h1 className="font-display text-2xl sm:text-3xl font-bold text-white tracking-tight">
+                        <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
                             {title}
                         </h1>
-                        <p className="mt-1.5 text-sm text-slate-400">
+                        <p className="mt-1.5 text-sm text-muted-foreground">
                             {subtitle}
                         </p>
                     </div>
@@ -141,7 +147,7 @@ export default function AuthLayout({
                             {/* Top accent bar */}
                             <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-primary/60 to-transparent" />
 
-                            <div className="bg-slate-900/60 backdrop-blur-2xl border border-slate-800/80 rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-2xl">
+                            <div className="bg-card/80 dark:bg-slate-900/60 backdrop-blur-2xl border border-border dark:border-slate-800/80 rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-2xl">
                                 {children}
                             </div>
                         </div>
@@ -163,7 +169,7 @@ export default function AuthLayout({
                         </div>
                     </div>
 
-                    <p className="mt-4 text-[10px] text-slate-600 font-mono">
+                    <p className="mt-4 text-[10px] text-muted-foreground/60 dark:text-slate-600 font-mono">
                         PulseLogic v1.0.0
                     </p>
                 </div>
