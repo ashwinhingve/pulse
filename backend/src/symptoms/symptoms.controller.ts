@@ -17,7 +17,7 @@ export class SymptomsController {
 
     @Post()
     @Roles(UserRole.ARMY_MEDICAL_OFFICER, UserRole.PUBLIC_MEDICAL_OFFICIAL, UserRole.ADMIN)
-    create(@Body() createDto: CreateSymptomDto, @CurrentUser() user: any) {
+    create(@Body() createDto: CreateSymptomDto, @CurrentUser() user: { id: string }) {
         return this.symptomsService.create(createDto, user.id);
     }
 
