@@ -20,6 +20,7 @@ import { isMobileBuild, mobileLogout } from '@/lib/mobile-auth';
 import EmergencyButton from '@/components/EmergencyButton';
 import AnimatedBackground from '@/components/ui/AnimatedBackground';
 import Logo, { LogoIcon } from '@/components/ui/Logo';
+import ThemeToggle from '@/components/ui/ThemeToggle';
 
 /* ── Sidebar Context ─────────────────────────────────────── */
 
@@ -65,6 +66,7 @@ const NAV_ITEMS: NavItem[] = [
     { href: '/dashboard/assistant', label: 'AI Assistant', icon: Bot, roles: [UserRole.ARMY_MEDICAL_OFFICER, UserRole.PUBLIC_MEDICAL_OFFICIAL, UserRole.ADMIN], section: 'Tools' },
     { href: '/dashboard/education', label: 'Medical Library', icon: BookOpen, roles: [UserRole.ARMY_MEDICAL_OFFICER, UserRole.PUBLIC_MEDICAL_OFFICIAL, UserRole.ADMIN], section: 'Tools' },
     { href: '/dashboard/about', label: 'About & Credits', icon: Info, roles: [UserRole.ARMY_MEDICAL_OFFICER, UserRole.PUBLIC_MEDICAL_OFFICIAL, UserRole.ADMIN], section: 'System' },
+    { href: '/dashboard/audit', label: 'Audit Logs', icon: Shield, roles: [UserRole.ADMIN], section: 'System' },
     { href: '/admin', label: 'Admin Panel', icon: Shield, roles: [UserRole.ADMIN], section: 'System' },
 ];
 
@@ -255,12 +257,13 @@ function SidebarNav({ collapsed = false, mobileMode = false, onClose }: SidebarN
                                 </div>
                             </div>
                         </Link>
+                        <ThemeToggle compact />
                         <button
                             onClick={(e) => {
                                 e.preventDefault();
                                 handleLogout();
                             }}
-                            className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                            className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all "
                             title="Sign out"
                         >
                             <LogOut size={16} />

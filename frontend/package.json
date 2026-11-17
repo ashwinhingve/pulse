@@ -3,11 +3,10 @@
     "version": "1.0.0",
     "private": true,
     "scripts": {
-        "dev": "cross-env MOBILE_BUILD=false NEXT_PUBLIC_MOBILE_BUILD=false next dev",
+        "dev": "cross-env MOBILE_BUILD=false NEXT_PUBLIC_MOBILE_BUILD=false next dev -p 4050",
         "build": "cross-env MOBILE_BUILD=false NEXT_PUBLIC_MOBILE_BUILD=false next build",
-        "start": "next start",
+        "start": "cross-env MOBILE_BUILD=false NEXT_PUBLIC_MOBILE_BUILD=false next start -p 4050",
         "lint": "next lint",
-        "test:session": "node --test scripts/test-session.cjs",
         "env:dev": "node scripts/set-env.js dev",
         "env:staging": "node scripts/set-env.js staging",
         "env:prod": "node scripts/set-env.js prod",
@@ -25,7 +24,8 @@
         "build:tauri": "node scripts/build-native.cjs",
         "desktop:dev": "npx @tauri-apps/cli dev",
         "desktop:build": "npm run env:desktop && npx @tauri-apps/cli build",
-        "version:bump": "node scripts/bump-version.js"
+        "version:bump": "node scripts/bump-version.js",
+        "test:session": "node --test scripts/test-session.cjs"
     },
     "dependencies": {
         "@capacitor/android": "^8.0.2",
@@ -43,6 +43,7 @@
         "next-themes": "^0.2.1",
         "react": "^18.2.0",
         "react-dom": "^18.2.0",
+        "recharts": "^3.10.1",
         "socket.io-client": "^4.6.1",
         "tailwind-merge": "^2.6.1",
         "tweetnacl": "^1.0.3",
@@ -55,11 +56,9 @@
         "@types/react": "^18.2.48",
         "@types/react-dom": "^18.2.18",
         "autoprefixer": "^10.4.17",
-        "build": "^0.1.4",
         "cross-env": "^10.1.0",
         "eslint": "^8.56.0",
         "eslint-config-next": "14.1.0",
-        "npx": "^10.2.2",
         "postcss": "^8.4.33",
         "tailwindcss": "^3.4.1",
         "tailwindcss-animate": "^1.0.7",

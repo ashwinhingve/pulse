@@ -43,3 +43,9 @@ Web build/dev commands explicitly select web mode. Native static builds use an i
 - Gemini Flash Lite returned live text through the application adapter. This verifies connectivity, not clinical accuracy or image-analysis accuracy.
 
 Native installation packages and physical-device behavior were not tested. Run the platform checklist before distributing native releases. Existing populated environment files remain ignored by Git. No production database was migrated or application deployed.
+
+## Local runtime and upstream integration
+
+Local PostgreSQL runs on port 5432 with the application's configured role/database. The rollout migration has been applied locally; `npm run migration:run` reports no pending migrations. The web application uses port 4050 and the backend uses port 3001. Ignored local environment files point the web application to this local backend; native environment presets remain separate.
+
+The integration with the latest main branch retains persistent notifications, the audit-log page/navigation, theme controls, and chart API compatibility. Notification schema creation is included in the additive migration. Multipart uploads now respect `analyzeAfterUpload=false` even with implicit type conversion enabled.

@@ -61,10 +61,10 @@ function PendingView({ username, requestedRole }: { username: string; requestedR
                     { label: 'Status', value: 'Pending Review', highlight: true },
                 ].map((row) => (
                     <div key={row.label} className="flex justify-between text-sm">
-                        <span className="text-slate-500">{row.label}</span>
+                        <span className="text-muted-foreground dark:text-slate-500">{row.label}</span>
                         <span className={cn(
                             row.mono && 'font-mono',
-                            row.highlight ? 'text-amber-400 font-semibold' : 'text-white',
+                            row.highlight ? 'text-amber-400 font-semibold' : 'text-foreground dark:text-white',
                         )}>
                             {row.value}
                         </span>
@@ -74,7 +74,7 @@ function PendingView({ username, requestedRole }: { username: string; requestedR
 
             {/* Next steps */}
             <div className="space-y-2 mb-6 animate-fade-in" style={{ animationDelay: '200ms', animationFillMode: 'backwards' }}>
-                <p className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold mb-2">What happens next</p>
+                <p className="text-[11px] text-muted-foreground dark:text-slate-500 uppercase tracking-wider font-semibold mb-2">What happens next</p>
                 {[
                     'Admin reviews your request',
                     'Account activated with appropriate role',
@@ -239,9 +239,9 @@ function RegisterForm() {
                                 <span
                                     className={cn(
                                         'text-xs font-semibold hidden sm:inline transition-colors',
-                                        isActive && 'text-white',
+                                        isActive && 'text-foreground dark:text-white',
                                         isDone && 'text-emerald-400',
-                                        !isActive && !isDone && 'text-slate-600',
+                                        !isActive && !isDone && 'text-muted-foreground/60 dark:text-slate-600',
                                     )}
                                 >
                                     {s.label}
@@ -294,19 +294,19 @@ function RegisterForm() {
                                     'group relative rounded-xl border p-5 text-left transition-all duration-200',
                                     form.role === 'army_medical_officer'
                                         ? 'bg-primary/8 border-primary/40 ring-2 ring-primary/20 shadow-lg shadow-primary/5'
-                                        : 'bg-slate-800/30 border-slate-700/50 hover:border-slate-600/60 hover:bg-slate-800/50',
+                                        : 'bg-secondary/30 dark:bg-slate-800/30 border-border dark:border-slate-700/50 hover:border-border/80 hover:dark:border-slate-600/60 hover:bg-secondary/50 hover:dark:bg-slate-800/50',
                                 )}
                             >
                                 <div className={cn(
                                     'w-11 h-11 rounded-xl flex items-center justify-center mb-3 transition-all',
                                     form.role === 'army_medical_officer'
                                         ? 'bg-primary/15 text-primary'
-                                        : 'bg-slate-700/40 text-slate-500 group-hover:text-slate-400',
+                                        : 'bg-muted dark:bg-slate-700/40 text-muted-foreground dark:text-slate-500 group-hover:text-foreground dark:group-hover:text-slate-400',
                                 )}>
                                     <Shield size={22} />
                                 </div>
-                                <p className="text-sm font-bold text-white mb-0.5">Army Medical Officer</p>
-                                <p className="text-[11px] text-slate-500 leading-relaxed">Military healthcare personnel with field & clinical access</p>
+                                <p className="text-sm font-bold text-foreground dark:text-white mb-0.5">Army Medical Officer</p>
+                                <p className="text-[11px] text-muted-foreground dark:text-slate-500 leading-relaxed">Military healthcare personnel with field & clinical access</p>
                                 {form.role === 'army_medical_officer' && (
                                     <div className="absolute top-3 right-3">
                                         <CheckCircle2 size={18} className="text-primary" />
@@ -322,19 +322,19 @@ function RegisterForm() {
                                     'group relative rounded-xl border p-5 text-left transition-all duration-200',
                                     form.role === 'public_medical_official'
                                         ? 'bg-primary/8 border-primary/40 ring-2 ring-primary/20 shadow-lg shadow-primary/5'
-                                        : 'bg-slate-800/30 border-slate-700/50 hover:border-slate-600/60 hover:bg-slate-800/50',
+                                        : 'bg-secondary/30 dark:bg-slate-800/30 border-border dark:border-slate-700/50 hover:border-border/80 hover:dark:border-slate-600/60 hover:bg-secondary/50 hover:dark:bg-slate-800/50',
                                 )}
                             >
                                 <div className={cn(
                                     'w-11 h-11 rounded-xl flex items-center justify-center mb-3 transition-all',
                                     form.role === 'public_medical_official'
                                         ? 'bg-primary/15 text-primary'
-                                        : 'bg-slate-700/40 text-slate-500 group-hover:text-slate-400',
+                                        : 'bg-muted dark:bg-slate-700/40 text-muted-foreground dark:text-slate-500 group-hover:text-foreground dark:group-hover:text-slate-400',
                                 )}>
                                     <Stethoscope size={22} />
                                 </div>
-                                <p className="text-sm font-bold text-white mb-0.5">Public Medical Official</p>
-                                <p className="text-[11px] text-slate-500 leading-relaxed">Public health administrator with oversight capabilities</p>
+                                <p className="text-sm font-bold text-foreground dark:text-white mb-0.5">Public Medical Official</p>
+                                <p className="text-[11px] text-muted-foreground dark:text-slate-500 leading-relaxed">Public health administrator with oversight capabilities</p>
                                 {form.role === 'public_medical_official' && (
                                     <div className="absolute top-3 right-3">
                                         <CheckCircle2 size={18} className="text-primary" />
@@ -450,7 +450,7 @@ function RegisterForm() {
                             <button
                                 type="button"
                                 onClick={goBack}
-                                className="flex-1 py-3.5 rounded-xl bg-slate-800/60 border border-slate-700/50 text-slate-300 font-medium flex items-center justify-center gap-2 hover:bg-slate-800 hover:border-slate-600/60 transition-all active:scale-[0.98] min-h-[52px]"
+                                className="flex-1 py-3.5 rounded-xl bg-secondary dark:bg-slate-800/60 border border-border dark:border-slate-700/50 text-foreground dark:text-slate-300 font-medium flex items-center justify-center gap-2 hover:bg-muted dark:hover:bg-slate-800 hover:border-border/80 dark:hover:border-slate-600/60 transition-all active:scale-[0.98] min-h-[52px]"
                             >
                                 <ArrowLeft size={16} />
                                 Back
@@ -506,7 +506,7 @@ function RegisterForm() {
                             <button
                                 type="button"
                                 onClick={goBack}
-                                className="flex-1 py-3.5 rounded-xl bg-slate-800/60 border border-slate-700/50 text-slate-300 font-medium flex items-center justify-center gap-2 hover:bg-slate-800 hover:border-slate-600/60 transition-all active:scale-[0.98] min-h-[52px]"
+                                className="flex-1 py-3.5 rounded-xl bg-secondary dark:bg-slate-800/60 border border-border dark:border-slate-700/50 text-foreground dark:text-slate-300 font-medium flex items-center justify-center gap-2 hover:bg-muted dark:hover:bg-slate-800 hover:border-border/80 dark:hover:border-slate-600/60 transition-all active:scale-[0.98] min-h-[52px]"
                             >
                                 <ArrowLeft size={16} />
                                 Back
@@ -555,7 +555,7 @@ function RegisterForm() {
 
 function RegisterLoading() {
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-[#0a0f1a] to-slate-950 flex items-center justify-center p-4">
+        <div className="min-h-screen bg-gradient-to-br from-background via-muted/50 to-background dark:from-slate-950 dark:via-[#0a0f1a] dark:to-slate-950 flex items-center justify-center p-4">
             <div className="flex flex-col items-center gap-4">
                 <div className="relative">
                     <div className="absolute inset-0 bg-primary/20 rounded-2xl blur-xl animate-pulse" />
@@ -563,7 +563,7 @@ function RegisterLoading() {
                         <HeartPulse className="w-8 h-8 text-primary animate-pulse" />
                     </div>
                 </div>
-                <p className="text-slate-400 text-sm font-medium">Loading PulseLogic...</p>
+                <p className="text-muted-foreground dark:text-slate-400 text-sm font-medium">Loading PulseLogic...</p>
             </div>
         </div>
     );

@@ -6,6 +6,12 @@ import { User } from '../users/user.entity';
 import { UserStatus } from '../common/enums/roles.enum';
 import { MedicalCase, CaseSeverity, CaseStatus } from '../medical/entities/medical-case.entity';
 import { UserRole, ClearanceLevel } from '../common/enums/roles.enum';
+import { NotificationsService } from '../notifications/notifications.service';
+import { Patient, Gender } from '../patients/entities/patient.entity';
+import { Doctor } from '../doctors/entities/doctor.entity';
+import { Diagnosis, DiagnosisStatus } from '../diagnoses/entities/diagnosis.entity';
+import { Report, ReportType } from '../reports/entities/report.entity';
+import { Symptom } from '../symptoms/entities/symptom.entity';
 
 @Injectable()
 export class DemoService implements OnApplicationBootstrap {
@@ -16,7 +22,18 @@ export class DemoService implements OnApplicationBootstrap {
         private userRepository: Repository<User>,
         @InjectRepository(MedicalCase)
         private caseRepository: Repository<MedicalCase>,
+        @InjectRepository(Patient)
+        private patientRepository: Repository<Patient>,
+        @InjectRepository(Doctor)
+        private doctorRepository: Repository<Doctor>,
+        @InjectRepository(Diagnosis)
+        private diagnosisRepository: Repository<Diagnosis>,
+        @InjectRepository(Report)
+        private reportRepository: Repository<Report>,
+        @InjectRepository(Symptom)
+        private symptomRepository: Repository<Symptom>,
         private dataSource: DataSource,
+        private notificationsService: NotificationsService,
     ) { }
 
     // Auto-seed on startup when the database is empty (first deployment)
@@ -60,8 +77,21 @@ export class DemoService implements OnApplicationBootstrap {
         // Create demo users
         await this.createDemoUsers();
 
-        // Create demo medical cases
+        // Create demo doctors
+        await this.createDemoDoctors();
+
+        // Create demo patients
+        await this.createDemoPatients();
+
+        // Create demo medical cases (expanded)
         await this.createDemoCases();
+
+        // Create demo diagnoses and reports
+        await this.createDemoDiagnoses();
+        await this.createDemoReports();
+
+        // Seed demo notifications
+        await this.seedNotifications();
 
         this.logger.log('✅ Demo data seeded successfully');
     }
@@ -165,67 +195,73 @@ export class DemoService implements OnApplicationBootstrap {
     }
 
     private async createDemoCases(): Promise<void> {
-        const armyOfficer = await this.userRepository.findOne({
-            where: { username: 'maj.harris' },
-        });
-
-        const publicOfficial = await this.userRepository.findOne({
-            where: { username: 'dr.williams' },
-        });
-
+        const armyOfficer = await this.userRepository.findOne({ where: { username: 'maj.harris' } });
+        const publicOfficial = await this.userRepository.findOne({ where: { username: 'dr.williams' } });
         if (!armyOfficer || !publicOfficial) return;
 
         const demoCases = [
-            // Military cases (created by Army Medical Officer)
             {
-                patientCode: 'MIL-2024-001',
-                severity: CaseSeverity.URGENT,
-                status: CaseStatus.IN_PROGRESS,
+                patientCode: 'MIL-2024-001', severity: CaseSeverity.URGENT, status: CaseStatus.IN_PROGRESS,
                 chiefComplaint: 'Combat-related injury requiring coordination',
                 symptoms: 'Multiple shrapnel wounds, field treatment administered',
                 vitals: { temp: 98.4, bp: '130/85', hr: 88, rr: 18, spo2: 96 },
-                medicalHistory: 'Previously healthy, no allergies',
-                assessment: 'Stable for transfer, requires surgical evaluation',
-                clearanceRequired: ClearanceLevel.SECRET,
-                createdBy: armyOfficer.id,
-                isClassified: true,
+                medicalHistory: 'Previously healthy, no allergies', assessment: 'Stable for transfer, requires surgical evaluation',
+                clearanceRequired: ClearanceLevel.SECRET, createdBy: armyOfficer.id, isClassified: true,
+                createdAt: new Date(),
             },
             {
-                patientCode: 'MIL-2024-002',
-                severity: CaseSeverity.ROUTINE,
-                status: CaseStatus.OPEN,
+                patientCode: 'MIL-2024-002', severity: CaseSeverity.ROUTINE, status: CaseStatus.OPEN,
                 chiefComplaint: 'Heat exhaustion during training',
                 symptoms: 'Fatigue, mild dehydration, headache',
                 vitals: { temp: 99.8, bp: '118/76', hr: 92, rr: 20, spo2: 98 },
                 medicalHistory: 'No significant history',
-                clearanceRequired: ClearanceLevel.UNCLASSIFIED,
-                createdBy: armyOfficer.id,
-                isClassified: false,
+                clearanceRequired: ClearanceLevel.UNCLASSIFIED, createdBy: armyOfficer.id, isClassified: false,
+                createdAt: new Date(),
             },
-            // Public health cases (created by Public Medical Official)
             {
-                patientCode: 'PUB-2024-001',
-                severity: CaseSeverity.ROUTINE,
-                status: CaseStatus.OPEN,
+                patientCode: 'PUB-2024-001', severity: CaseSeverity.ROUTINE, status: CaseStatus.RESOLVED,
                 chiefComplaint: 'Mass casualty incident coordination',
                 symptoms: 'Multiple civilian injuries from accident',
                 medicalHistory: 'Community health emergency',
-                clearanceRequired: ClearanceLevel.UNCLASSIFIED,
-                createdBy: publicOfficial.id,
-                isClassified: false,
+                clearanceRequired: ClearanceLevel.UNCLASSIFIED, createdBy: publicOfficial.id, isClassified: false,
+                createdAt: new Date(Date.now() - 30 * 86400000), // 1 month ago
             },
             {
-                patientCode: 'PUB-2024-002',
-                severity: CaseSeverity.CRITICAL,
-                status: CaseStatus.IN_PROGRESS,
+                patientCode: 'PUB-2024-002', severity: CaseSeverity.CRITICAL, status: CaseStatus.IN_PROGRESS,
                 chiefComplaint: 'Disease outbreak investigation',
                 symptoms: 'Cluster of respiratory illness cases',
                 medicalHistory: 'Public health surveillance case',
-                clearanceRequired: ClearanceLevel.CONFIDENTIAL,
-                createdBy: publicOfficial.id,
-                isClassified: false,
+                clearanceRequired: ClearanceLevel.CONFIDENTIAL, createdBy: publicOfficial.id, isClassified: false,
+                createdAt: new Date(),
             },
         ];
+
+        // Generate additional historical cases across last 12 months for volume charts
+        const severities = [CaseSeverity.ROUTINE, CaseSeverity.URGENT, CaseSeverity.CRITICAL];
+        const statuses = [CaseStatus.RESOLVED, CaseStatus.RESOLVED, CaseStatus.IN_PROGRESS];
+        
+        for (let i = 1; i <= 24; i++) {
+            const randomMonthOffset = Math.floor(Math.random() * 12);
+            const randomDaysOffset = Math.floor(Math.random() * 28);
+            const createdDate = new Date();
+            createdDate.setMonth(createdDate.getMonth() - randomMonthOffset);
+            createdDate.setDate(createdDate.getDate() - randomDaysOffset);
+            
+            demoCases.push({
+                patientCode: `HIST-2023-${i.toString().padStart(3, '0')}`,
+                severity: severities[Math.floor(Math.random() * severities.length)],
+                status: randomMonthOffset > 1 ? CaseStatus.RESOLVED : statuses[Math.floor(Math.random() * statuses.length)],
+                chiefComplaint: `Historical case sample ${i}`,
+                symptoms: 'Standard symptoms recorded',
+                vitals: {},
+                medicalHistory: 'N/A',
+                assessment: 'Archived',
+                clearanceRequired: ClearanceLevel.UNCLASSIFIED,
+                createdBy: publicOfficial.id,
+                isClassified: false,
+                createdAt: createdDate,
+            } as any);
+        }
 
         for (const caseData of demoCases) {
             const medicalCase = this.caseRepository.create(caseData);
@@ -244,8 +280,155 @@ export class DemoService implements OnApplicationBootstrap {
 
         // Re-seed directly (bypass the "already exists" guard in seedDemoData)
         await this.createDemoUsers();
+        await this.createDemoDoctors();
+        await this.createDemoPatients();
         await this.createDemoCases();
+        await this.createDemoDiagnoses();
+        await this.createDemoReports();
+        await this.seedNotifications();
 
         this.logger.log('✅ Demo data reset complete');
+    }
+
+    private async seedNotifications(): Promise<void> {
+        const users = await this.userRepository.find({
+            select: ['id', 'username'],
+        });
+        const userIds: Record<string, string> = {};
+        for (const u of users) {
+            userIds[u.username] = u.id;
+        }
+        await this.notificationsService.seedDemoNotifications(userIds);
+        this.logger.log('📬 Demo notifications seeded');
+    }
+
+    private async createDemoDoctors(): Promise<void> {
+        const armyOfficer = await this.userRepository.findOne({ where: { username: 'maj.harris' } });
+        const publicOfficial = await this.userRepository.findOne({ where: { username: 'dr.williams' } });
+
+        const demoDoctors = [
+            {
+                firstName: 'Sarah',
+                lastName: 'Harris',
+                specialization: 'Trauma Surgery',
+                department: 'Field Medical Unit Alpha',
+                experienceYears: 12,
+                userId: armyOfficer?.id,
+            },
+            {
+                firstName: 'Emily',
+                lastName: 'Williams',
+                specialization: 'Epidemiology',
+                department: 'Regional Health Authority',
+                experienceYears: 15,
+                userId: publicOfficial?.id,
+            }
+        ];
+
+        for (const docData of demoDoctors) {
+            const doctor = this.doctorRepository.create(docData);
+            await this.doctorRepository.save(doctor);
+            this.logger.log(`Created demo doctor: ${docData.firstName} ${docData.lastName}`);
+        }
+    }
+
+    private async createDemoPatients(): Promise<void> {
+        const admin = await this.userRepository.findOne({ where: { username: 'admin' } });
+        
+        const demoPatients = [
+            {
+                firstName: 'John', lastName: 'Doe', gender: Gender.MALE, bloodGroup: 'O+',
+                phone: '555-0101', email: 'john.doe@example.com',
+                medicalHistory: 'Hypertension', allergies: 'Penicillin',
+                createdBy: admin?.id || 'system',
+            },
+            {
+                firstName: 'Jane', lastName: 'Smith', gender: Gender.FEMALE, bloodGroup: 'A-',
+                phone: '555-0102', email: 'jane.smith@example.com',
+                medicalHistory: 'Asthma', allergies: 'None',
+                createdBy: admin?.id || 'system',
+            },
+            {
+                firstName: 'Michael', lastName: 'Johnson', gender: Gender.MALE, bloodGroup: 'B+',
+                phone: '555-0103', email: 'michael.j@example.com',
+                medicalHistory: 'Type 2 Diabetes', allergies: 'Sulfa Drugs',
+                createdBy: admin?.id || 'system',
+            }
+        ];
+
+        for (const patData of demoPatients) {
+            const patient = this.patientRepository.create(patData);
+            await this.patientRepository.save(patient);
+            this.logger.log(`Created demo patient: ${patData.firstName} ${patData.lastName}`);
+        }
+    }
+
+    private async createDemoDiagnoses(): Promise<void> {
+        const patients = await this.patientRepository.find();
+        const doctors = await this.doctorRepository.find();
+        
+        if (patients.length === 0 || doctors.length === 0) return;
+
+        const demoDiagnoses = [
+            {
+                diseaseName: 'Acute Bronchitis',
+                description: 'Inflammation of the bronchial tubes',
+                icdCode: 'J20.9',
+                status: DiagnosisStatus.CONFIRMED,
+                patientId: patients[0].id,
+                doctorId: doctors[0].id,
+                diagnosedAt: new Date(Date.now() - 15 * 86400000), // 15 days ago
+            },
+            {
+                diseaseName: 'Essential Hypertension',
+                description: 'High blood pressure',
+                icdCode: 'I10',
+                status: DiagnosisStatus.PRELIMINARY,
+                patientId: patients[1].id,
+                doctorId: doctors[1]?.id || doctors[0].id,
+                diagnosedAt: new Date(Date.now() - 5 * 86400000), // 5 days ago
+            }
+        ];
+
+        for (const diagData of demoDiagnoses) {
+            const diagnosis = this.diagnosisRepository.create(diagData);
+            await this.diagnosisRepository.save(diagnosis);
+            this.logger.log(`Created demo diagnosis: ${diagData.diseaseName}`);
+        }
+    }
+
+    private async createDemoReports(): Promise<void> {
+        const patients = await this.patientRepository.find();
+        const doctors = await this.doctorRepository.find();
+        const diagnoses = await this.diagnosisRepository.find();
+
+        if (patients.length === 0 || doctors.length === 0) return;
+
+        const demoReports = [
+            {
+                title: 'Comprehensive Metabolic Panel',
+                type: ReportType.LAB,
+                findings: 'Slightly elevated glucose levels, otherwise normal.',
+                recommendations: 'Follow up in 3 months with A1C test.',
+                patientId: patients[0].id,
+                doctorId: doctors[0].id,
+                diagnosisId: diagnoses[0]?.id,
+            },
+            {
+                title: 'Chest X-Ray',
+                type: ReportType.IMAGING,
+                findings: 'Clear lungs, no infiltrates or effusions.',
+                recommendations: 'No further action required.',
+                patientId: patients[1].id,
+                doctorId: doctors[1]?.id || doctors[0].id,
+                diagnosisId: diagnoses[1]?.id,
+            }
+        ];
+
+        for (const repData of demoReports) {
+            const report = this.reportRepository.create(repData);
+            await this.reportRepository.save(report);
+            this.logger.log(`Created demo report: ${repData.title}`);
+        }
     }
 }

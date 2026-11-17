@@ -47,6 +47,14 @@ export class DashboardService {
             users,
             recentActivity,
             analytics,
+            charts: {
+                monthlyCaseVolume: analytics.months.map(item => ({ month: item.month, cases: item.count })),
+                caseCompletionRate: (() => {
+                    const total = analytics.statuses.reduce((sum, item) => sum + item.count, 0);
+                    const count = (status: string) => analytics.statuses.find(item => item.status === status)?.count || 0;
+                    return { total, closed: count('resolved'), open: count('open'), inProgress: count('in_progress'), completionPct: total ? Math.round(count('resolved') / total * 100) : 0 };
+                })(),
+            },
         };
     }
 

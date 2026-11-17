@@ -80,8 +80,36 @@ function LoginForm() {
         >
             {/* Welcome message */}
             <div className="mb-6 animate-fade-in">
-                <h2 className="text-lg font-bold text-white mb-1">Welcome back</h2>
-                <p className="text-sm text-slate-400">Sign in to access your clinical dashboard</p>
+                <h2 className="text-lg font-bold text-foreground dark:text-white mb-1">Welcome back</h2>
+                <p className="text-sm text-muted-foreground dark:text-slate-400">Sign in to access your clinical dashboard</p>
+
+                {/* Quick-fill Demo Account selector */}
+                <div className="mt-3.5 pt-3 border-t border-border dark:border-slate-800/80">
+                    <p className="text-[11px] font-semibold text-muted-foreground dark:text-slate-400 uppercase tracking-wider mb-2">Quick-Fill Demo Account:</p>
+                    <div className="flex flex-wrap gap-1.5">
+                        <button
+                            type="button"
+                            onClick={() => { setUsername('admin'); setPassword('Demo123!'); }}
+                            className="px-2.5 py-1 rounded-lg bg-red-500/10 border border-red-500/30 text-red-300 text-xs font-medium hover:bg-red-500/20 transition-all active:scale-95"
+                        >
+                            🛡️ Admin
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => { setUsername('maj.harris'); setPassword('Demo123!'); }}
+                            className="px-2.5 py-1 rounded-lg bg-teal-500/10 border border-teal-500/30 text-teal-300 text-xs font-medium hover:bg-teal-500/20 transition-all active:scale-95"
+                        >
+                            🪖 Maj. Harris
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => { setUsername('dr.williams'); setPassword('Demo123!'); }}
+                            className="px-2.5 py-1 rounded-lg bg-blue-500/10 border border-blue-500/30 text-blue-300 text-xs font-medium hover:bg-blue-500/20 transition-all active:scale-95"
+                        >
+                            🩺 Dr. Williams
+                        </button>
+                    </div>
+                </div>
             </div>
 
             {/* Just-registered banner */}
@@ -166,10 +194,10 @@ function LoginForm() {
             {/* Divider */}
             <div className="relative my-6 animate-fade-in" style={{ animationDelay: '350ms', animationFillMode: 'backwards' }}>
                 <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-slate-700/50" />
+                    <div className="w-full border-t border-border dark:border-slate-700/50" />
                 </div>
                 <div className="relative flex justify-center">
-                    <span className="bg-slate-900/60 px-3 text-[11px] text-slate-500 uppercase tracking-wider font-medium">
+                    <span className="bg-background dark:bg-slate-900/60 px-3 text-[11px] text-muted-foreground dark:text-slate-500 uppercase tracking-wider font-medium">
                         or
                     </span>
                 </div>
@@ -179,7 +207,7 @@ function LoginForm() {
             <div className="animate-fade-in" style={{ animationDelay: '400ms', animationFillMode: 'backwards' }}>
                 <Link
                     href="/auth/register"
-                    className="group w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-slate-800/40 border border-slate-700/50 text-slate-300 text-sm font-medium hover:bg-slate-800/70 hover:border-slate-600/60 hover:text-white transition-all active:scale-[0.98] min-h-[48px]"
+                    className="group w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-secondary/50 dark:bg-slate-800/40 border border-border dark:border-slate-700/50 text-foreground dark:text-slate-300 text-sm font-medium hover:bg-secondary dark:hover:bg-slate-800/70 hover:border-border/80 dark:hover:border-slate-600/60 hover:text-foreground dark:hover:text-white transition-all active:scale-[0.98] min-h-[48px]"
                 >
                     <UserIcon size={15} className="text-primary" />
                     Create New Account
@@ -188,7 +216,7 @@ function LoginForm() {
             </div>
 
             {/* Footer note */}
-            <p className="mt-5 text-center text-[11px] text-slate-600 animate-fade-in" style={{ animationDelay: '450ms', animationFillMode: 'backwards' }}>
+            <p className="mt-5 text-center text-[11px] text-muted-foreground/60 dark:text-slate-600 animate-fade-in" style={{ animationDelay: '450ms', animationFillMode: 'backwards' }}>
                 Authorized personnel only. All access is monitored.
             </p>
         </AuthLayout>
@@ -197,7 +225,7 @@ function LoginForm() {
 
 function LoginLoading() {
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-[#0a0f1a] to-slate-950 flex items-center justify-center p-4">
+        <div className="min-h-screen bg-gradient-to-br from-background via-muted/50 to-background dark:from-slate-950 dark:via-[#0a0f1a] dark:to-slate-950 flex items-center justify-center p-4">
             <div className="flex flex-col items-center gap-4">
                 <div className="relative">
                     <div className="absolute inset-0 bg-primary/20 rounded-2xl blur-xl animate-pulse" />
@@ -205,7 +233,7 @@ function LoginLoading() {
                         <HeartPulse className="w-8 h-8 text-primary animate-pulse" />
                     </div>
                 </div>
-                <p className="text-slate-400 text-sm font-medium">Loading PulseLogic...</p>
+                <p className="text-muted-foreground dark:text-slate-400 text-sm font-medium">Loading PulseLogic...</p>
             </div>
         </div>
     );
