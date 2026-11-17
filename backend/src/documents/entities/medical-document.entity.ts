@@ -60,6 +60,9 @@ export class MedicalDocument {
     @Column({ nullable: true })
     caseId: string;
 
+    @Column({ type: 'text', nullable: true })
+    analysisError: string | null;
+
     // Document classification
     @Column({ type: 'varchar' })
     documentType: DocumentType;
@@ -104,7 +107,7 @@ export class MedicalDocument {
 
     // ── AI analysis ───────────────────────────────────────────
     @Column({ type: 'jsonb', nullable: true })
-    aiAnalysis: AIAnalysisResult;
+    aiAnalysis: AIAnalysisResult | null;
 
     @Column({ default: false })
     isAnalyzed: boolean;

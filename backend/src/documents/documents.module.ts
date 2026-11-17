@@ -1,3 +1,4 @@
+import { AiModule } from '../ai/ai.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
@@ -10,6 +11,7 @@ import { MedGemmaService } from '../ai/medgemma.service';
 
 @Module({
     imports: [
+        AiModule,
         TypeOrmModule.forFeature([MedicalDocument]),
         ConfigModule,
     ],

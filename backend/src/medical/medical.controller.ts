@@ -1,3 +1,4 @@
+import type { ListQuery } from '../common/pagination';
 import {
     Controller,
     Get,
@@ -7,6 +8,7 @@ import {
     Param,
     Delete,
     UseGuards,
+    Query,
 } from '@nestjs/common';
 import { MedicalService } from './medical.service';
 import { CreateMedicalCaseDto } from './dto/create-medical-case.dto';
@@ -31,15 +33,19 @@ export class MedicalController {
         @Body() createDto: CreateMedicalCaseDto,
         @CurrentUser() user: any,
     ) {
-        return this.medicalService.create(createDto, user.id);
+        return this.medicalService.create(createDto, user.id, user.clearanceLevel);
     }
 
     @Get()
     @Roles(UserRole.ARMY_MEDICAL_OFFICER, UserRole.PUBLIC_MEDICAL_OFFICIAL, UserRole.ADMIN)
     @RequireClearance(ClearanceLevel.UNCLASSIFIED)
-    findAll(@CurrentUser() user: any) {
-        return this.medicalService.findAll(user.clearanceLevel);
+    findAll(@CurrentUser() user: any, @Query() query: ListQuery) {
+        if (query.page !== undefined || query.limit !== undefined) return this.medicalService.findPage(query, user.clearanceLevel);
+        return this.medicalService.findAll(user.clearanceLevel, query.patientId);
     }
+
+    @Get('assignees')
+    getAssignees() { return this.medicalService.getAssignees(); }
 
     @Get(':id')
     @Roles(UserRole.ARMY_MEDICAL_OFFICER, UserRole.PUBLIC_MEDICAL_OFFICIAL, UserRole.ADMIN)

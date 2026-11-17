@@ -29,7 +29,6 @@ export class AuditController {
 
     @Get('verify')
     async verify() {
-        const intact = await this.auditService.verifyIntegrity();
-        return { intact };
+        return this.auditService.verifyIntegrity();
     }
 }

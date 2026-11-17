@@ -1,5 +1,7 @@
 'use client';
 
+import { authenticatedFetch } from '@/lib/session';
+
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
@@ -309,7 +311,7 @@ function BookViewer({ book, onBack }: { book: LibraryBook; onBack: () => void })
             const headers: Record<string, string> = { 'Content-Type': 'application/json' };
             if (token) headers['Authorization'] = `Bearer ${token}`;
 
-            const res = await fetch(`${API_URL}/ai/query-protocol`, {
+            const res = await authenticatedFetch(`${API_URL}/ai/query-protocol`, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({ query: userMsg }),
@@ -320,7 +322,7 @@ function BookViewer({ book, onBack }: { book: LibraryBook; onBack: () => void })
                 const data = await res.json();
                 aiText = data.protocol || data.response || JSON.stringify(data);
             } else {
-                const gRes = await fetch(`${API_URL}/ai/guidelines/search?q=${encodeURIComponent(userMsg)}`, {
+                const gRes = await authenticatedFetch(`${API_URL}/ai/guidelines/search?q=${encodeURIComponent(userMsg)}`, {
                     headers: token ? { Authorization: `Bearer ${token}` } : {},
                 });
                 if (gRes.ok) {

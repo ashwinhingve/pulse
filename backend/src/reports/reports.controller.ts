@@ -1,3 +1,5 @@
+import { Query } from '@nestjs/common';
+import type { ListQuery } from '../common/pagination';
 import {
     Controller, Get, Post, Body, Patch, Param, Delete, UseGuards,
 } from '@nestjs/common';
@@ -22,7 +24,8 @@ export class ReportsController {
 
     @Get()
     @Roles(UserRole.ARMY_MEDICAL_OFFICER, UserRole.PUBLIC_MEDICAL_OFFICIAL, UserRole.ADMIN)
-    findAll() {
+    findAll(@Query() query: ListQuery) {
+        if (query.page !== undefined || query.limit !== undefined) return this.reportsService.findPage(query);
         return this.reportsService.findAll();
     }
 

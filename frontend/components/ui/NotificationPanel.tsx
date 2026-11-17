@@ -21,12 +21,7 @@ const typeConfig = {
     alert: { icon: AlertTriangle, bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-600 dark:text-red-400' },
 };
 
-const sampleNotifications: Notification[] = [
-    { id: '1', type: 'alert', title: 'Critical Lab Result', message: 'Patient #2847 abnormal CBC results require review', time: '2 min ago' },
-    { id: '2', type: 'info', title: 'New Case Assigned', message: 'Case #1052 assigned to your department', time: '15 min ago' },
-    { id: '3', type: 'success', title: 'Report Approved', message: 'Monthly analytics report approved by admin', time: '1 hour ago' },
-    { id: '4', type: 'warning', title: 'System Maintenance', message: 'Scheduled maintenance at 02:00 UTC tonight', time: '3 hours ago' },
-];
+const sampleNotifications: Notification[] = [];
 
 export function NotificationBell() {
     const [open, setOpen] = useState(false);
@@ -35,6 +30,8 @@ export function NotificationBell() {
     return (
         <div className="relative">
             <button
+                aria-label="Notifications"
+                aria-expanded={open}
                 onClick={() => setOpen(!open)}
                 className="relative p-2 rounded-xl hover:bg-muted transition-colors"
             >
@@ -64,6 +61,7 @@ export function NotificationBell() {
                                 </button>
                             </div>
                             <div className="max-h-80 overflow-y-auto scrollbar-thin">
+                                <p className="p-4 text-sm text-muted-foreground">No notifications. Live clinical alerts are not enabled.</p>
                                 {sampleNotifications.map((n, i) => {
                                     const tc = typeConfig[n.type];
                                     const Icon = tc.icon;

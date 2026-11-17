@@ -6,13 +6,14 @@ import {
     AIAnalysisResult,
     KeyMeasurement,
 } from './entities/medical-document.entity';
+import { BioMistralService } from '../ai/biomistral.service';
 import { MedGemmaService } from '../ai/medgemma.service';
 
 @Injectable()
 export class DocumentAnalysisService {
     private readonly logger = new Logger(DocumentAnalysisService.name);
 
-    constructor(private readonly medgemmaService: MedGemmaService) {}
+    constructor(private readonly medgemmaService: MedGemmaService, private readonly medicalAI: BioMistralService) {}
 
     async analyzeDocument(doc: MedicalDocument, fileBuffer: Buffer): Promise<AIAnalysisResult> {
         const isImage = doc.mimeType.startsWith('image/');
@@ -54,9 +55,7 @@ export class DocumentAnalysisService {
             model = result.model;
         }
 
-        this.logger.log(
-            `[ParseAnalysis] rawAnalysis length=${rawAnalysis.length}, first 400 chars: ${rawAnalysis.slice(0, 400)}`,
-        );
+        if (!rawAnalysis.trim()) throw new Error('AI provider returned no document analysis');
 
         return this.parseAnalysis(rawAnalysis, model);
     }
@@ -72,15 +71,13 @@ export class DocumentAnalysisService {
         try {
             const base64 = buffer.toString('base64');
             const dataUrl = `data:${mimeType};base64,${base64}`;
-            return await this.medgemmaService.generateWithImage(dataUrl, prompt, systemPrompt);
-        } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : String(err);
-            this.logger.warn(`Vision model failed (${msg}). Falling back to text-only.`);
-            const result = await this.medgemmaService.generate(
-                `${prompt}\n\n[Note: The image could not be directly processed. Provide a structured clinical analysis framework for this imaging type as if reviewing the study, noting image review was not performed visually.]`,
-                { systemPrompt, maxTokens: 1500 },
-            );
-            return { text: result.text, model: result.model };
+            const result = this.medicalAI.getStatus().status === 'online'
+                ? await this.medicalAI.generateWithImage(dataUrl, prompt, systemPrompt)
+                : await this.medgemmaService.generateWithImage(dataUrl, prompt, systemPrompt);
+            if (!result.text.trim()) throw new Error('Image analysis returned no content');
+            return result;
+        } catch {
+            throw new Error('Image analysis unavailable. No image findings were generated. Retry when the configured vision provider is available.');
         }
     }
 
@@ -98,14 +95,16 @@ export class DocumentAnalysisService {
             const pdfData = await pdfParse(buffer);
             extractedText = (pdfData.text || '').slice(0, 6000);
         } catch {
-            extractedText = '[PDF text extraction unavailable]';
+            throw new Error('PDF text extraction failed. No document findings were generated.');
         }
 
+        if (!extractedText.trim()) throw new Error('This PDF has no readable text. Upload a text-based PDF or an image.');
         const fullPrompt = extractedText
             ? `${prompt}\n\nExtracted Report Content:\n${extractedText}`
             : prompt;
 
-        const result = await this.medgemmaService.generate(fullPrompt, {
+        const provider = this.medicalAI.getStatus().status === 'online' ? this.medicalAI : this.medgemmaService;
+        const result = await provider.generate(fullPrompt, {
             systemPrompt,
             maxTokens: 1800,
         });
@@ -369,7 +368,7 @@ Report all measured values (EF, gradients, velocities, organ sizes) as keyMeasur
 
         const confidenceScore = (typeof parsed.confidenceScore === 'number')
             ? Math.min(1, Math.max(0, parsed.confidenceScore))
-            : this.inferConfidenceFromText(rawText);
+            : 0;
 
         const riskIndicators = this.sanitiseStringArray(parsed.riskIndicators, 6)
             .filter(s => s.length > 2);

@@ -645,3 +645,18 @@
 .animation-delay-500 {
   animation-delay: 500ms;
 }
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}
+@media print {
+    nav, header, button, .no-print { display: none !important; }
+    body, main { background: white !important; color: black !important; }
+    .print-report { position: absolute; inset: 0; background: white; color: black; padding: 24px; }
+}
+
+@media print {
+    body:has(.print-report) * { visibility: hidden; }
+    body:has(.print-report) .print-report, body:has(.print-report) .print-report * { visibility: visible; }
+    [role="dialog"] { overflow: visible !important; max-height: none !important; transform: none !important; }
+    .print-report { position: absolute; top: 0; left: 0; right: 0; }
+}

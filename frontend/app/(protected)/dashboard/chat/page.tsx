@@ -142,6 +142,12 @@ export default function ChatPage() {
         [selectConversation, markAsRead]
     );
 
+    useEffect(() => {
+        const id = new URLSearchParams(window.location.search).get('conversationId');
+        const conversation = conversations.find(item => item.id === id);
+        if (conversation && currentConversation?.id !== id) handleSelectConversation(conversation);
+    }, [conversations, currentConversation?.id, handleSelectConversation]);
+
     const handleOpenNewChat = useCallback(async () => {
         setSearchTerm('');
         setShowNewChat(true);
@@ -276,7 +282,7 @@ export default function ChatPage() {
                     <div className="flex items-center gap-2">
                         <div className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded-full">
                             <Lock size={12} />
-                            <span className="hidden sm:inline">E2E Encrypted</span>
+                            <span className="hidden sm:inline">Member Access</span>
                         </div>
                         <button
                             onClick={handleOpenNewChat}
@@ -577,7 +583,7 @@ export default function ChatPage() {
                                 </button>
                             </div>
                             <p className="text-[10px] text-muted-foreground mt-2 text-center">
-                                Messages are end-to-end encrypted
+                                Messages are shared within this authenticated conversation
                             </p>
                         </div>
                     </div>

@@ -1,11 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useConfirm } from '@/hooks/useConfirm';
+
+import { useState, useEffect, Suspense, useRef } from 'react';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import {
     ArrowLeft, FileText, AlertTriangle, Clock, Shield, User,
     Activity, Clipboard, Stethoscope, Brain, Loader2, Edit2, X, Check,
 } from 'lucide-react';
+import CaseEditor from '@/components/CaseEditor';
+import CaseConnections from '@/components/CaseConnections';
+import { useAuthStore } from '@/lib/store/auth';
+import ErrorBanner from '@/components/ui/ErrorBanner';
 import { api } from '@/lib/api';
 
 interface MedicalCaseDetail {
@@ -27,10 +33,16 @@ interface MedicalCaseDetail {
     closedAt?: string;
 }
 
-export default function CaseDetailPage() {
+function CaseDetailContents() {
+    const { askConfirm, confirmationDialog } = useConfirm();
     const router = useRouter();
     const params = useParams();
-    const id = (params?.id ?? '') as string;
+    const query = useSearchParams();
+    const id = query?.get('id') || (params?.id as string) || '';
+    const requestRef = useRef(0);
+    const [editing, setEditing] = useState(false);
+    const canEdit = useAuthStore(s => (s.user?.clearanceLevel ?? 0) >= 1);
+    useEffect(() => { if (!id) { setError('Select a case from the case list.'); setLoading(false); } }, [id]);
 
     const [caseData, setCaseData] = useState<MedicalCaseDetail | null>(null);
     const [loading, setLoading] = useState(true);
@@ -38,21 +50,24 @@ export default function CaseDetailPage() {
     const [closing, setClosing] = useState(false);
 
     useEffect(() => {
+        const requestId = ++requestRef.current;
         const fetchCase = async () => {
+            setLoading(true); setError('');
             try {
                 const { data } = await api.get(`/medical/cases/${id}`);
-                setCaseData(data);
+                if (requestId === requestRef.current) setCaseData(data);
             } catch (err: any) {
-                setError(err?.response?.data?.message || 'Failed to load case details');
+                if (requestId === requestRef.current) setError(err?.response?.data?.message || 'Failed to load case details');
             } finally {
-                setLoading(false);
+                if (requestId === requestRef.current) setLoading(false);
             }
         };
         if (id) fetchCase();
+        return () => { requestRef.current++; };
     }, [id]);
 
     const handleClose = async () => {
-        if (!confirm('Close this case? This marks it as resolved.')) return;
+        if (!await askConfirm('Close this case? This marks it as resolved.')) return;
         setClosing(true);
         try {
             await api.post(`/medical/cases/${id}/close`);
@@ -96,7 +111,7 @@ export default function CaseDetailPage() {
         );
     }
 
-    if (error || !caseData) {
+    if (!caseData) {
         return (
             <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 p-4">
                 <AlertTriangle className="text-destructive" size={48} />
@@ -110,6 +125,8 @@ export default function CaseDetailPage() {
 
     return (
         <div className="min-h-screen bg-background">
+            {confirmationDialog}
+            {editing && <CaseEditor record={caseData} onClose={() => setEditing(false)} onSaved={record => { setCaseData(record); setEditing(false); }} />}
             {/* Header */}
             <header className="glass border-b border-border sticky top-0 z-30">
                 <div className="max-w-4xl mx-auto px-4 h-16 flex items-center gap-4">
@@ -120,7 +137,8 @@ export default function CaseDetailPage() {
                         <h1 className="text-lg font-bold text-foreground truncate">Case Detail</h1>
                         <p className="text-xs text-muted-foreground">{caseData.patientCode}</p>
                     </div>
-                    {caseData.status !== 'resolved' && caseData.status !== 'archived' && (
+                    {canEdit && <button className="btn-secondary text-sm" onClick={() => setEditing(true)}>Edit case</button>}
+                    {canEdit && caseData.status !== 'resolved' && caseData.status !== 'archived' && (
                         <button
                             onClick={handleClose}
                             disabled={closing}
@@ -134,6 +152,9 @@ export default function CaseDetailPage() {
             </header>
 
             <main className="max-w-4xl mx-auto p-4 space-y-4 pb-24 animate-fade-in">
+                {error && <ErrorBanner message={error} onDismiss={() => setError('')} />}
+                <CaseConnections record={caseData} />
+
                 {/* Status badges */}
                 <div className="flex flex-wrap gap-2">
                     <span className={`px-3 py-1 rounded-lg text-xs font-bold uppercase ${getSeverityColor(caseData.severity)}`}>
@@ -279,3 +300,5 @@ export default function CaseDetailPage() {
         </div>
     );
 }
+
+export default function CaseDetailPage() { return <Suspense fallback={<p role="status">Loading case…</p>}><CaseDetailContents /></Suspense>; }

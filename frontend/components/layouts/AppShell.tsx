@@ -1,5 +1,7 @@
 'use client';
 
+import { clearClientSession } from '@/lib/session';
+
 import { createContext, useContext, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -54,6 +56,7 @@ const NAV_ITEMS: NavItem[] = [
     { href: '/dashboard/cases', label: 'Medical Cases', icon: FileText, roles: [UserRole.ARMY_MEDICAL_OFFICER, UserRole.PUBLIC_MEDICAL_OFFICIAL, UserRole.ADMIN], section: 'Clinical' },
     { href: '/dashboard/symptoms', label: 'Symptoms', icon: Thermometer, roles: [UserRole.ARMY_MEDICAL_OFFICER, UserRole.PUBLIC_MEDICAL_OFFICIAL], section: 'Clinical' },
     { href: '/dashboard/patients', label: 'Patients', icon: Users, roles: [UserRole.ARMY_MEDICAL_OFFICER, UserRole.PUBLIC_MEDICAL_OFFICIAL, UserRole.ADMIN], section: 'Clinical' },
+    { href: '/dashboard/documents', label: 'Documents', icon: FileText, roles: [UserRole.ARMY_MEDICAL_OFFICER, UserRole.PUBLIC_MEDICAL_OFFICIAL, UserRole.ADMIN], section: 'Clinical' },
     { href: '/dashboard/doctors', label: 'Doctors', icon: Stethoscope, roles: [UserRole.ARMY_MEDICAL_OFFICER, UserRole.PUBLIC_MEDICAL_OFFICIAL, UserRole.ADMIN], section: 'Clinical' },
     { href: '/dashboard/reports', label: 'Reports', icon: ClipboardList, roles: [UserRole.ARMY_MEDICAL_OFFICER, UserRole.PUBLIC_MEDICAL_OFFICIAL, UserRole.ADMIN], section: 'Clinical' },
     { href: '/dashboard/diagnoses', label: 'Diagnoses', icon: ClipboardList, roles: [UserRole.ARMY_MEDICAL_OFFICER, UserRole.PUBLIC_MEDICAL_OFFICIAL, UserRole.ADMIN], section: 'Clinical' },
@@ -100,7 +103,7 @@ function SidebarNav({ collapsed = false, mobileMode = false, onClose }: SidebarN
         .slice(0, 2);
 
     const handleLogout = async () => {
-        useAuthStore.getState().clearAuth();
+        clearClientSession();
         if (isMobileBuild()) {
             mobileLogout();
             router.push('/auth/login');

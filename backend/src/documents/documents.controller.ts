@@ -15,7 +15,7 @@ import {
     BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { Response } from 'express';
+import type { Response } from 'express';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -89,6 +89,7 @@ export class DocumentsController {
     async findAll(
         @Query('type') type?: DocumentType,
         @Query('patientId') patientId?: string,
+        @Query('caseId') caseId?: string,
         @Query('isAnalyzed') isAnalyzed?: string,
         @CurrentUser() user?: any,
     ) {
@@ -96,6 +97,7 @@ export class DocumentsController {
             {
                 type,
                 patientId,
+                caseId,
                 isAnalyzed: isAnalyzed !== undefined ? isAnalyzed === 'true' : undefined,
             },
             user.clearanceLevel ?? 0,
@@ -147,6 +149,7 @@ export class DocumentsController {
     @Post(':id/analyze')
     @HttpCode(HttpStatus.OK)
     async analyze(@Param('id') id: string, @CurrentUser() user: any) {
+        await this.documentsService.findOne(id, user.clearanceLevel ?? 0);
         return this.documentsService.triggerAnalysis(id);
     }
 

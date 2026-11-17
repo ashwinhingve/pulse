@@ -1,3 +1,4 @@
+import { paginatedList, ListQuery } from '../common/pagination';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull } from 'typeorm';
@@ -15,6 +16,10 @@ export class DiagnosesService {
     async create(createDto: CreateDiagnosisDto): Promise<Diagnosis> {
         const diagnosis = this.diagnosisRepository.create(createDto);
         return this.diagnosisRepository.save(diagnosis);
+    }
+
+    findPage(query: ListQuery) {
+        return paginatedList(this.diagnosisRepository, query, ['diseaseName', 'icdCode'], ['patient', 'doctor']);
     }
 
     async findAll(): Promise<Diagnosis[]> {

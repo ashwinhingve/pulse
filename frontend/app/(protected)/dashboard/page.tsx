@@ -1,5 +1,7 @@
 'use client';
 
+import { clearClientSession } from '@/lib/session';
+
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -18,7 +20,8 @@ import { useSidebar } from '@/components/layouts/AppShell';
 import { api } from '@/lib/api';
 import { LogoIcon } from '@/components/ui/Logo';
 import StatCard from '@/components/ui/StatCard';
-import ChartPlaceholder from '@/components/ui/ChartPlaceholder';
+import CaseCharts, { CaseAnalytics } from '@/components/ui/CaseCharts';
+import ErrorBanner from '@/components/ui/ErrorBanner';
 import { NotificationBell } from '@/components/ui/NotificationPanel';
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton';
 import EmptyState from '@/components/ui/EmptyState';
@@ -33,6 +36,7 @@ interface DashboardStats {
     cases: number;
     symptoms: number;
     users: number;
+    analytics?: CaseAnalytics;
     recentActivity: { action: string; time: string; type: string }[];
 }
 
@@ -47,6 +51,8 @@ export default function DashboardPage() {
     const [mobileUser, setMobileUser] = useState<any>(null);
     const [stats, setStats] = useState<DashboardStats | null>(null);
     const [statsLoading, setStatsLoading] = useState(true);
+    const [statsError, setStatsError] = useState('');
+    const [refreshKey, setRefreshKey] = useState(0);
 
     useEffect(() => {
         if (isMobileBuild()) {
@@ -57,18 +63,21 @@ export default function DashboardPage() {
 
     useEffect(() => {
         const fetchStats = async () => {
+            setStatsLoading(true);
+            setStatsError('');
             try {
                 const res = await api.get('/dashboard/stats');
                 setStats(res.data);
             } catch {
-                setStats({ patients: 0, doctors: 0, reports: 0, diagnoses: 0, cases: 0, symptoms: 0, users: 0, recentActivity: [] });
+                setStats(null);
+                setStatsError('Dashboard data could not be loaded.');
             } finally { setStatsLoading(false); }
         };
         fetchStats();
-    }, []);
+    }, [refreshKey]);
 
     const handleLogout = async () => {
-        clearAuth();
+        clearClientSession();
         if (isMobileBuild()) { mobileLogout(); router.push('/auth/login'); }
         else { const { signOut } = await import('next-auth/react'); await signOut({ callbackUrl: '/auth/login' }); }
     };
@@ -85,7 +94,7 @@ export default function DashboardPage() {
         if (!stats) return [];
         if (isArmyOfficer) return [
             { label: 'Patients', value: stats.patients, icon: Users, color: 'teal' },
-            { label: 'Active Cases', value: stats.cases, icon: FileText, color: 'blue' },
+            { label: 'Cases', value: stats.cases, icon: FileText, color: 'blue' },
             { label: 'Reports', value: stats.reports, icon: ClipboardList, color: 'purple' },
             { label: 'Diagnoses', value: stats.diagnoses, icon: Stethoscope, color: 'cyan' },
         ];
@@ -116,7 +125,7 @@ export default function DashboardPage() {
         if (isArmyOfficer) common.push({ icon: Activity, title: 'ECG Analysis', desc: 'Upload & analyze recordings', gradient: 'from-red-400 to-red-600', href: '/dashboard/ecg' });
         common.push(
             { icon: MessageSquare, title: 'Secure Chat', desc: isArmyOfficer ? 'Chat with Public Officials' : isPublicOfficial ? 'Chat with Army Officers' : 'Chat with all users', gradient: 'from-indigo-400 to-indigo-600', href: '/dashboard/chat' },
-            { icon: Bot, title: 'AI Assistant', desc: 'Medical guidance (BioMistral)', gradient: 'from-violet-400 to-purple-600', href: '/dashboard/assistant' },
+            { icon: Bot, title: 'AI Assistant', desc: 'Medical guidance (Clinical AI)', gradient: 'from-violet-400 to-purple-600', href: '/dashboard/assistant' },
             { icon: BookOpen, title: 'Medical Library', desc: 'AIIMS Antibiotic Policy', gradient: 'from-emerald-400 to-emerald-600', href: '/dashboard/education' },
         );
         if (isAdmin) common.push({ icon: Shield, title: 'Admin Panel', desc: 'Manage system users', gradient: 'from-slate-400 to-slate-600', href: '/admin' });
@@ -244,6 +253,8 @@ export default function DashboardPage() {
 
             {/* ── Main ── */}
             <main className="flex-1 w-full">
+                    {statsError && <div className="p-4"><ErrorBanner message={statsError} /><button className="btn-secondary mt-2" onClick={() => setRefreshKey(k => k + 1)}>Retry dashboard</button></div>}
+
                 <div className="container-app space-y-6 pb-24 lg:pb-8 max-w-7xl">
 
                     {/* Welcome banner */}
@@ -313,8 +324,7 @@ export default function DashboardPage() {
 
                     {/* Charts row */}
                     <div className="grid md:grid-cols-2 gap-4">
-                        <ChartPlaceholder type="bar" title="Monthly Case Volume" subtitle="Last 12 months" />
-                        <ChartPlaceholder type="donut" title="Case Completion Rate" subtitle="Current quarter" />
+                        <div className="lg:col-span-2"><CaseCharts data={stats?.analytics} /></div>
                     </div>
 
                     {/* Feature cards */}

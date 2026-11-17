@@ -1,5 +1,9 @@
 'use client';
 
+import { useConfirm } from '@/hooks/useConfirm';
+
+import { authenticatedFetch } from '@/lib/session';
+
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -47,6 +51,7 @@ interface AIAnalysis {
 }
 
 interface MedicalDocument {
+    analysisError?: string | null;
     id: string;
     documentType: DocumentType;
     originalFileName: string;
@@ -308,10 +313,10 @@ function ConfidenceRing({ score, size = 'md' }: { score: number; size?: 'sm' | '
                 <text x={dims / 2} y={dims / 2 + 1} textAnchor="middle"
                     dominantBaseline="middle"
                     fontSize={fSize} fontWeight="700" fill={color}>
-                    {pct}%
+                    {pct ? `${pct}%` : 'N/A'}
                 </text>
             </svg>
-            <p className="text-[11px] text-muted-foreground font-semibold">{label} confidence</p>
+            <p className="text-[11px] text-muted-foreground font-semibold">Model estimate · unvalidated</p>
         </div>
     );
 }
@@ -428,7 +433,7 @@ function FilePanel({ doc, onDownload }: { doc: MedicalDocument; onDownload: () =
             setErr('');
             try {
                 const token = await getToken();
-                const res = await fetch(`${apiUrl}/documents/${doc.id}/file`, {
+                const res = await authenticatedFetch(`${apiUrl}/documents/${doc.id}/file`, {
                     headers: token ? { Authorization: `Bearer ${token}` } : {},
                 });
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -1378,6 +1383,8 @@ function UploadModal({
     onUploaded: (doc: MedicalDocument, autoAnalyze: boolean) => void;
 }) {
     const [form, setForm] = useState<UploadForm>(DEFAULT_FORM);
+    const [patients, setPatients] = useState<{ id: string; firstName: string; lastName: string }[]>([]);
+    useEffect(() => { authenticatedFetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/patients`).then(async response => { if (!response.ok) throw new Error(); return response.json(); }).then(setPatients).catch(() => setError('Patient choices unavailable. You can upload without a patient link.')); }, []);
     const [file, setFile] = useState<File | null>(null);
     const [dragOver, setDragOver] = useState(false);
     const [uploading, setUploading] = useState(false);
@@ -1407,7 +1414,7 @@ function UploadModal({
             if (form.doctorName) fd.append('doctorName', form.doctorName);
             if (form.notes) fd.append('notes', form.notes);
             fd.append('analyzeAfterUpload', String(form.analyzeAfterUpload));
-            const res = await fetch(`${apiUrl}/documents/upload`, {
+            const res = await authenticatedFetch(`${apiUrl}/documents/upload`, {
                 method: 'POST',
                 headers: token ? { Authorization: `Bearer ${token}` } : {},
                 body: fd,
@@ -1520,9 +1527,10 @@ function UploadModal({
                         </div>
 
                         {/* Form fields */}
+                        <label className="block text-sm">Linked patient (optional)<select className="form-input mt-1" value={form.patientId} onChange={e => setForm(previous => ({ ...previous, patientId: e.target.value }))}><option value="">Unlinked document</option>{patients.map(patient => <option key={patient.id} value={patient.id}>{patient.firstName} {patient.lastName}</option>)}</select></label>
                         <div className="grid grid-cols-2 gap-3">
                             {[
-                                { key: 'patientId', label: 'Patient ID', placeholder: 'e.g. P-2024-001' },
+
                                 { key: 'reportDate', label: 'Report Date', placeholder: '', type: 'date' },
                                 { key: 'doctorName', label: 'Ordering Doctor', placeholder: 'Dr. Smith' },
                                 { key: 'hospitalName', label: 'Hospital / Facility', placeholder: 'City Medical Center' },
@@ -1596,6 +1604,7 @@ function UploadModal({
 /* ─────────────────────────── Main Page ──────────────────────── */
 
 export default function DocumentsPage() {
+    const { askConfirm, confirmationDialog } = useConfirm();
     const [documents, setDocuments] = useState<MedicalDocument[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedType, setSelectedType] = useState<string>('all');
@@ -1610,12 +1619,17 @@ export default function DocumentsPage() {
     const fetchDocuments = useCallback(async () => {
         try {
             const token = await getToken();
-            const res = await fetch(`${apiUrl}/documents`, {
+            const params = new URLSearchParams(window.location.search);
+            const filters = new URLSearchParams();
+            for (const key of ['patientId', 'caseId']) { const value = params.get(key); if (value) filters.set(key, value); }
+            const res = await authenticatedFetch(`${apiUrl}/documents?${filters}`, {
                 headers: token ? { Authorization: `Bearer ${token}` } : {},
             });
             if (!res.ok) throw new Error('Failed to load documents');
             const data = await res.json();
             setDocuments(Array.isArray(data) ? data : []);
+            const selected = data.find((doc: MedicalDocument) => doc.id === params.get('documentId'));
+            if (selected) setDetailDoc(selected);
         } catch (err: any) {
             setError(err.message);
         } finally {
@@ -1631,22 +1645,25 @@ export default function DocumentsPage() {
 
     const startPolling = useCallback((docId: string) => {
         if (pollTimers.current.has(docId)) return;
+        const started = Date.now();
         const t = setInterval(async () => {
+            if (Date.now() - started > 120000) { clearInterval(t); pollTimers.current.delete(docId); setAnalyzingIds(prev => { const next = new Set(prev); next.delete(docId); return next; }); setError('Analysis timed out. Refresh the document before retrying.'); return; }
             try {
                 const token = await getToken();
-                const res = await fetch(`${apiUrl}/documents/${docId}`, {
+                const res = await authenticatedFetch(`${apiUrl}/documents/${docId}`, {
                     headers: token ? { Authorization: `Bearer ${token}` } : {},
                 });
-                if (!res.ok) return;
+                if (!res.ok) throw new Error(`Status unavailable (${res.status})`);
                 const doc: MedicalDocument = await res.json();
                 if (!doc.isAnalyzing) {
+                    if (doc.analysisError) setError(doc.analysisError);
                     clearInterval(t);
                     pollTimers.current.delete(docId);
                     setAnalyzingIds(prev => { const s = new Set(prev); s.delete(docId); return s; });
                     setDocuments(prev => prev.map(d => d.id === docId ? doc : d));
                     setDetailDoc(prev => prev?.id === docId ? doc : prev);
                 }
-            } catch {}
+            } catch (err: any) { clearInterval(t); pollTimers.current.delete(docId); setAnalyzingIds(prev => { const next = new Set(prev); next.delete(docId); return next; }); setError(err.message || 'Unable to check analysis status.'); }
         }, 3000);
         pollTimers.current.set(docId, t);
     }, [apiUrl]);
@@ -1657,7 +1674,7 @@ export default function DocumentsPage() {
         setDetailDoc(prev => prev?.id === docId ? { ...prev, isAnalyzing: true } : prev);
         try {
             const token = await getToken();
-            const res = await fetch(`${apiUrl}/documents/${docId}/analyze`, {
+            const res = await authenticatedFetch(`${apiUrl}/documents/${docId}/analyze`, {
                 method: 'POST',
                 headers: token ? { Authorization: `Bearer ${token}` } : {},
             });
@@ -1665,17 +1682,19 @@ export default function DocumentsPage() {
             const updated = await res.json();
             setDocuments(prev => prev.map(d => d.id === docId ? updated : d));
             setDetailDoc(prev => prev?.id === docId ? updated : prev);
-        } catch {
-            startPolling(docId);
+        } catch (err: any) {
+            setError(err.message || 'Analysis failed. Retry when the provider is available.');
+            setDocuments(prev => prev.map(d => d.id === docId ? { ...d, isAnalyzing: false } : d));
+            setDetailDoc(prev => prev?.id === docId ? { ...prev, isAnalyzing: false } : prev);
         } finally {
             setAnalyzingIds(prev => { const s = new Set(prev); s.delete(docId); return s; });
         }
-    }, [apiUrl, startPolling]);
+    }, [apiUrl]);
 
     const handleDownload = useCallback(async (doc: MedicalDocument) => {
         try {
             const token = await getToken();
-            const res = await fetch(`${apiUrl}/documents/${doc.id}/file`, {
+            const res = await authenticatedFetch(`${apiUrl}/documents/${doc.id}/file`, {
                 headers: token ? { Authorization: `Bearer ${token}` } : {},
             });
             if (!res.ok) throw new Error('Download failed');
@@ -1692,19 +1711,20 @@ export default function DocumentsPage() {
     }, [apiUrl]);
 
     const handleDelete = useCallback(async (docId: string) => {
-        if (!confirm('Permanently delete this document? This action cannot be undone.')) return;
+        if (!await askConfirm('Remove this document from active lists? Its encrypted file and audit history are retained.')) return;
         try {
             const token = await getToken();
-            await fetch(`${apiUrl}/documents/${docId}`, {
+            const response = await authenticatedFetch(`${apiUrl}/documents/${docId}`, {
                 method: 'DELETE',
                 headers: token ? { Authorization: `Bearer ${token}` } : {},
             });
+            if (!response.ok) throw new Error(`Delete failed (${response.status})`);
             setDocuments(prev => prev.filter(d => d.id !== docId));
             setDetailDoc(prev => prev?.id === docId ? null : prev);
         } catch (err: any) {
             setError(err.message);
         }
-    }, [apiUrl]);
+    }, [apiUrl, askConfirm]);
 
     const handleUploaded = useCallback((doc: MedicalDocument, autoAnalyze: boolean) => {
         setDocuments(prev => [doc, ...prev]);
@@ -1740,6 +1760,7 @@ export default function DocumentsPage() {
 
     return (
         <div className="flex flex-col gap-5 p-4 lg:p-6 pb-24 lg:pb-8">
+            {confirmationDialog}
 
             <PageHeader
                 title="Medical Documents & AI"

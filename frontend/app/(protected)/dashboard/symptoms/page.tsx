@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
     Thermometer, AlertTriangle, CheckCircle2, Loader2,
     Shield, Brain, Heart, Bone, Eye, Ear, Wind, Droplets,
@@ -12,6 +12,8 @@ import FormTextarea from '@/components/ui/FormTextarea';
 import ErrorBanner from '@/components/ui/ErrorBanner';
 
 interface SymptomAnalysis {
+    source?: string;
+    model?: string;
     analysis: string;
     suggestions: string[];
     urgency: 'low' | 'medium' | 'high';
@@ -80,6 +82,10 @@ const severityLevels = [
 ];
 
 export default function SymptomsPage() {
+    const [patients, setPatients] = useState<any[]>([]); const [patientId, setPatientId] = useState('');
+    const [saving, setSaving] = useState(false); const [saved, setSaved] = useState('');
+    useEffect(() => { api.get('/patients').then(r => setPatients(r.data)).catch(() => setError('Unable to load patients for symptom recording.')); }, []);
+
     const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
     const [expandedCategory, setExpandedCategory] = useState<string | null>('General');
     const [severity, setSeverity] = useState('moderate');
@@ -176,6 +182,8 @@ export default function SymptomsPage() {
             />
 
             <main className="flex-1 w-full">
+                <section className="card p-4 m-4 space-y-3"><h2 className="font-semibold">Record in patient history</h2><label className="block text-sm">Patient<select className="form-input mt-1" value={patientId} onChange={e => setPatientId(e.target.value)}><option value="">Select patient</option>{patients.map(p => <option key={p.id} value={p.id}>{p.firstName} {p.lastName}</option>)}</select></label><button className="btn-secondary" disabled={saving || !patientId || !selectedSymptoms.length} onClick={async () => { setSaving(true); setSaved(''); try { await api.post('/symptoms', { patientId, name: selectedSymptoms.join(', '), description: additionalNotes, severity, duration }); setSaved('Observation saved. AI analysis remains separate.'); setSelectedSymptoms([]); } catch (err: any) { setError(err.response?.data?.message || 'Failed to save symptoms.'); } finally { setSaving(false); } }}>{saving ? 'Saving…' : 'Save selected symptoms'}</button>{saved && <p role="status" className="text-sm text-primary">{saved}</p>}</section>
+
                 <div className="container-app space-y-5 pb-24 lg:pb-8 max-w-4xl animate-fade-in">
                 {/* Disclaimer banner */}
                 <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/10 dark:to-orange-900/10 border border-amber-200 dark:border-amber-800/50 rounded-2xl p-4 flex items-start gap-3">
@@ -387,9 +395,9 @@ export default function SymptomsPage() {
                         <div className={`rounded-2xl px-5 py-4 flex items-center gap-3 border ${getUrgencyColor(analysis.urgency)}`}>
                             {getUrgencyIcon(analysis.urgency)}
                             <div className="flex-1">
-                                <p className="font-bold text-sm uppercase tracking-wide">{analysis.urgency} Priority</p>
+                                <p className="font-bold text-sm uppercase tracking-wide">{analysis.source === 'guidelines-fallback' ? 'Urgency not assessed' : `${analysis.urgency} Priority`}</p>
                                 <p className="text-xs opacity-80 mt-0.5">
-                                    {analysis.urgency === 'high' ? 'Immediate medical attention recommended' :
+                                    {analysis.source === 'guidelines-fallback' ? 'Guideline lookup is not a patient assessment.' : analysis.urgency === 'high' ? 'Immediate medical attention recommended' :
                                      analysis.urgency === 'medium' ? 'Medical consultation advised' : 'Monitor and follow up as needed'}
                                 </p>
                             </div>
@@ -403,7 +411,7 @@ export default function SymptomsPage() {
                                 </div>
                                 <h2 className="text-lg font-bold text-foreground">AI Analysis</h2>
                             </div>
-                            <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">{analysis.analysis}</p>
+                            <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">{analysis.analysis}</p><p className="text-xs text-muted-foreground mt-2">{analysis.source === 'guidelines-fallback' ? 'Guideline fallback · model unavailable' : `Model: ${analysis.model || 'configured provider'}`}</p>
                         </div>
 
                         {/* Suggestions */}

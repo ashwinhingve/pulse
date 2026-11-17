@@ -48,7 +48,8 @@ export const authOptions: NextAuthOptions = {
             name: 'Credentials',
             credentials: {
                 username: { label: "Username", type: "text" },
-                password: { label: "Password", type: "password" }
+                password: { label: "Password", type: "password" },
+                mfaCode: { label: "Authenticator code", type: "text" }
             },
             async authorize(credentials): Promise<User | null> {
                 if (!credentials?.username || !credentials?.password) {
@@ -62,6 +63,7 @@ export const authOptions: NextAuthOptions = {
                         body: JSON.stringify({
                             username: credentials.username,
                             password: credentials.password,
+                            ...(credentials.mfaCode ? { mfaCode: credentials.mfaCode } : {}),
                         }),
                     });
 
@@ -95,13 +97,15 @@ export const authOptions: NextAuthOptions = {
                                 clearanceLevel: user.clearanceLevel,
                                 accessToken: data.accessToken,
                                 refreshToken: data.refreshToken,
+                                mfaEnabled: user.mfaEnabled,
+                                department: user.department,
                             };
                         }
                     }
 
                     return null;
                 } catch (error) {
-                    console.error('Auth error:', error);
+                    if (error instanceof Error && ['ACCOUNT_PENDING', 'ACCOUNT_SUSPENDED'].includes(error.message)) throw error;
                     return null;
                 }
             },
@@ -117,6 +121,8 @@ export const authOptions: NextAuthOptions = {
                 token.clearanceLevel = user.clearanceLevel;
                 token.accessToken = user.accessToken;
                 token.refreshToken = user.refreshToken;
+                token.mfaEnabled = user.mfaEnabled;
+                token.department = user.department;
                 return token;
             }
 
@@ -136,21 +142,44 @@ export const authOptions: NextAuthOptions = {
                             token.refreshToken = refreshed.refreshToken;
                             console.log('[NextAuth] Backend token refreshed successfully');
                         } else {
-                            console.warn('[NextAuth] Failed to refresh backend token');
+                            token.accessToken = '';
+                            token.error = 'RefreshAccessTokenError';
                         }
                     }
                 }
             }
 
+            if (token.accessToken) {
+                try {
+                    const profile = await fetch(`${API_URL}/auth/profile`, {
+                        headers: { Authorization: `Bearer ${token.accessToken}` }, cache: 'no-store',
+                    });
+                    if (profile.ok) {
+                        const account = await profile.json();
+                        token.role = account.role;
+                        token.clearanceLevel = account.clearanceLevel;
+                        token.mfaEnabled = account.mfaEnabled;
+                        token.department = account.department;
+                        token.name = account.fullName || account.username;
+                    } else if (profile.status === 401) {
+                        token.accessToken = '';
+                        token.error = 'AccountAccessRevoked';
+                    }
+                } catch { /* A transient network error does not invalidate a valid session. */ }
+            }
             return token;
         },
         async session({ session, token }) {
             if (session.user) {
                 session.user.id = token.id as string;
+                session.user.name = token.name || token.username;
                 session.user.username = token.username as string;
                 session.user.role = token.role as UserRole;
                 session.user.clearanceLevel = token.clearanceLevel as number;
                 session.accessToken = token.accessToken as string;
+                session.error = token.error;
+                session.user.mfaEnabled = token.mfaEnabled;
+                session.user.department = token.department;
             }
             return session;
         },

@@ -58,14 +58,14 @@ export default function AuthLayout({
                         <p className="text-slate-400 text-sm leading-relaxed mb-10">
                             Military-grade healthcare intelligence platform with
                             real-time analytics, AI-powered diagnostics, and
-                            end-to-end encrypted communication.
+                            authenticated clinical communication.
                         </p>
 
                         {/* Feature pills */}
                         <div className="flex flex-wrap justify-center gap-3">
                             {[
-                                { icon: Shield, label: 'HIPAA Compliant' },
-                                { icon: Lock, label: 'E2E Encrypted' },
+                                { icon: Shield, label: 'Role-Based Access' },
+                                { icon: Lock, label: 'Clearance Checks' },
                                 { icon: Heart, label: 'AI Diagnostics' },
                             ].map(({ icon: Icon, label }) => (
                                 <div
@@ -150,7 +150,7 @@ export default function AuthLayout({
                         </div>
                         <div className="flex items-center gap-1.5 text-primary/80 text-[11px] bg-primary/8 border border-primary/10 px-3 py-1.5 rounded-full">
                             <Fingerprint size={11} />
-                            <span className="font-medium">HIPAA</span>
+                            <span className="font-medium">MVP</span>
                         </div>
                         <div className="flex items-center gap-1.5 text-blue-400/80 text-[11px] bg-blue-500/8 border border-blue-500/10 px-3 py-1.5 rounded-full">
                             <Wifi size={11} />

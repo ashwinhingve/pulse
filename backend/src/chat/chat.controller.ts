@@ -1,5 +1,6 @@
 import {
     Controller,
+    ClassSerializerInterceptor,
     Get,
     Post,
     Body,
@@ -16,7 +17,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
-import { Response } from 'express';
+import type { Response } from 'express';
 import { join } from 'path';
 import { createReadStream } from 'fs';
 import { ChatService } from './chat.service';
@@ -26,6 +27,7 @@ import { SendMessageDto, SendAIMessageDto } from './dto/send-message.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @Controller('chat')
+@UseInterceptors(ClassSerializerInterceptor)
 @UseGuards(JwtAuthGuard)
 export class ChatController {
     constructor(
@@ -104,8 +106,9 @@ export class ChatController {
     }
 
     @Get('attachments/:filename')
-    @Header('Cache-Control', 'private, max-age=86400')
-    serveAttachment(@Param('filename') filename: string, @Res() res: Response) {
+    @Header('Cache-Control', 'no-store')
+    async serveAttachment(@Request() req: any, @Param('filename') filename: string, @Res() res: Response) {
+        await this.chatService.authorizeAttachment(req.user.userId, filename);
         // Sanitize filename to prevent path traversal
         const safe = filename.replace(/[^a-zA-Z0-9._-]/g, '');
         const filePath = join(process.cwd(), 'uploads', 'chat', safe);

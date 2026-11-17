@@ -1,67 +1,23 @@
-import axios from 'axios'
+import axios from 'axios';
+import { signOut } from 'next-auth/react';
+import { isMobileBuild } from './mobile-auth';
+import { API_URL, getAuthToken, clearClientSession } from './session';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'
-
-export const api = axios.create({
-    baseURL: API_URL,
-    headers: {
-        'Content-Type': 'application/json',
-    },
-    withCredentials: true,
-})
-
-// Request interceptor to add auth token
-api.interceptors.request.use(
-    (config) => {
-        const token = localStorage.getItem('accessToken')
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`
-        }
-
-        const deviceId = localStorage.getItem('deviceId')
-        if (deviceId) {
-            config.headers['X-Device-ID'] = deviceId
-        }
-
-        return config
-    },
-    (error) => {
-        return Promise.reject(error)
+export const api = axios.create({ baseURL: API_URL, headers: { 'Content-Type': 'application/json' } });
+api.interceptors.request.use(async config => {
+    const token = await getAuthToken();
+    if (!token) throw new Error('Your session expired. Please sign in again.');
+    config.headers.Authorization = `Bearer ${token}`;
+    return config;
+});
+api.interceptors.response.use(response => response, async error => {
+    const request = error.config;
+    if (error.response?.status === 401 && request && !request._retry) {
+        request._retry = true;
+        const token = await getAuthToken(true);
+        if (token) return api(request);
     }
-)
-
-// Response interceptor to handle token refresh
-api.interceptors.response.use(
-    (response) => response,
-    async (error) => {
-        const originalRequest = error.config
-
-        if (error.response?.status === 401 && !originalRequest._retry) {
-            originalRequest._retry = true
-
-            try {
-                const refreshToken = localStorage.getItem('refreshToken')
-                const response = await axios.post(`${API_URL}/auth/refresh`, {}, {
-                    headers: {
-                        Authorization: `Bearer ${refreshToken}`,
-                    },
-                })
-
-                const { accessToken } = response.data
-                localStorage.setItem('accessToken', accessToken)
-
-                originalRequest.headers.Authorization = `Bearer ${accessToken}`
-                return api(originalRequest)
-            } catch (refreshError) {
-                localStorage.removeItem('accessToken')
-                localStorage.removeItem('refreshToken')
-                window.location.href = '/auth/login'
-                return Promise.reject(refreshError)
-            }
-        }
-
-        return Promise.reject(error)
-    }
-)
-
-export default api
+    if (error.response?.status === 401) { clearClientSession(); if (!isMobileBuild()) await signOut({ redirect: false }); }
+    return Promise.reject(error);
+});
+export default api;

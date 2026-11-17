@@ -1,3 +1,6 @@
+import { MedicalCase } from '../medical/entities/medical-case.entity';
+import { Patient } from '../patients/entities/patient.entity';
+import { IsNull } from 'typeorm';
 import {
     Injectable,
     NotFoundException,
@@ -58,6 +61,10 @@ export class DocumentsService {
 
         await this.ensureUploadDir();
 
+        if (dto.caseId) await this.requireCaseAccess(dto.caseId, userClearance);
+        if (dto.patientId && !await this.documentRepo.manager.getRepository(Patient).findOne({ where: { id: dto.patientId, deletedAt: IsNull() } })) {
+            throw new NotFoundException('Patient not found');
+        }
         // Per-file AES-256-CBC key
         const fileKey = randomBytes(32);
         const fileIv = randomBytes(16);
@@ -110,6 +117,7 @@ export class DocumentsService {
         filters: {
             type?: DocumentType;
             patientId?: string;
+            caseId?: string;
             isAnalyzed?: boolean;
         },
         userClearance: number,
@@ -118,8 +126,10 @@ export class DocumentsService {
             .createQueryBuilder('doc')
             .where('doc.deletedAt IS NULL')
             .andWhere('doc.clearanceRequired <= :clearance', { clearance: userClearance })
+            .andWhere('(doc.caseId IS NULL OR EXISTS (SELECT 1 FROM medical_cases c WHERE c.id::text = doc.caseId AND c."deletedAt" IS NULL AND c."clearanceRequired" <= :clearance))')
             .orderBy('doc.createdAt', 'DESC');
 
+        if (filters.caseId) qb.andWhere('doc.caseId = :caseId', { caseId: filters.caseId });
         if (filters.type) {
             qb.andWhere('doc.documentType = :type', { type: filters.type });
         }
@@ -139,6 +149,7 @@ export class DocumentsService {
         if (doc.clearanceRequired > userClearance) {
             throw new ForbiddenException('Insufficient clearance level to access this document');
         }
+        if (doc.caseId && userClearance !== 99) await this.requireCaseAccess(doc.caseId, userClearance);
         return doc;
     }
 
@@ -173,7 +184,7 @@ export class DocumentsService {
         const doc = await this.documentRepo.findOne({ where: { id } });
         if (!doc) throw new NotFoundException('Document not found');
 
-        await this.documentRepo.update(id, { isAnalyzing: true });
+        await this.documentRepo.update(id, { isAnalyzing: true, isAnalyzed: false, aiAnalysis: null, analysisError: null });
 
         try {
             const { buffer } = await this.getFileBuffer(id, 99); // bypass clearance internally
@@ -181,13 +192,14 @@ export class DocumentsService {
 
             await this.documentRepo.update(id, {
                 aiAnalysis: analysis,
+                analysisError: null,
                 isAnalyzed: true,
                 isAnalyzing: false,
             });
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : String(err);
             this.logger.error(`Analysis failed for ${id}: ${msg}`);
-            await this.documentRepo.update(id, { isAnalyzing: false });
+            await this.documentRepo.update(id, { isAnalyzing: false, isAnalyzed: false, analysisError: 'Analysis unavailable. Retry when the AI provider is available.' });
             throw err;
         }
 
@@ -211,10 +223,11 @@ export class DocumentsService {
             try {
                 const doc = await this.documentRepo.findOne({ where: { id } });
                 if (!doc) return;
-                await this.documentRepo.update(id, { isAnalyzing: true });
+                await this.documentRepo.update(id, { isAnalyzing: true, isAnalyzed: false, aiAnalysis: null, analysisError: null });
                 const analysis = await this.analysisService.analyzeDocument(doc, fileBuffer);
                 await this.documentRepo.update(id, {
                     aiAnalysis: analysis,
+                analysisError: null,
                     isAnalyzed: true,
                     isAnalyzing: false,
                 });
@@ -222,9 +235,14 @@ export class DocumentsService {
             } catch (err: unknown) {
                 const msg = err instanceof Error ? err.message : String(err);
                 this.logger.error(`Background analysis failed for ${id}: ${msg}`);
-                await this.documentRepo.update(id, { isAnalyzing: false }).catch(() => {});
+                await this.documentRepo.update(id, { isAnalyzing: false, isAnalyzed: false, analysisError: 'Analysis unavailable. Retry when the AI provider is available.' }).catch(() => {});
             }
         });
+    }
+
+    private async requireCaseAccess(caseId: string, clearance: number) {
+        const record = await this.documentRepo.manager.getRepository(MedicalCase).findOne({ where: { id: caseId, deletedAt: IsNull() } });
+        if (!record || record.clearanceRequired > clearance) throw new ForbiddenException('Case access denied');
     }
 
     private async ensureUploadDir(): Promise<void> {

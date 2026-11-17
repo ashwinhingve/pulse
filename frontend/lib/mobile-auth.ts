@@ -43,6 +43,7 @@ export interface MobileUser {
     role: string;
     clearanceLevel: number;
     department?: string;
+    mfaEnabled?: boolean;
 }
 
 export interface MobileSession {
@@ -77,12 +78,12 @@ export const clearSession = (): void => {
 };
 
 // Login via backend API
-export const mobileLogin = async (username: string, password: string): Promise<MobileSession> => {
+export const mobileLogin = async (username: string, password: string, mfaCode?: string): Promise<MobileSession> => {
     // Call backend login endpoint
     const loginRes = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username, password, ...(mfaCode ? { mfaCode } : {}) }),
     });
 
     if (!loginRes.ok) {

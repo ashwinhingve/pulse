@@ -1,11 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useConfirm } from '@/hooks/useConfirm';
+
+import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
+import { useAuthStore, UserRole } from '@/lib/store/auth';
 import { motion } from 'framer-motion';
 import {
     Users, Plus, Edit2, Trash2,
     Phone, Mail, Droplets, AlertTriangle,
 } from 'lucide-react';
+import Pagination from '@/components/ui/Pagination';
 import { api } from '@/lib/api';
 import type { Patient } from '@/types';
 import PageHeader from '@/components/ui/PageHeader';
@@ -20,12 +25,17 @@ import LoadingSkeleton from '@/components/ui/LoadingSkeleton';
 import Badge from '@/components/ui/Badge';
 
 export default function PatientsPage() {
+    const { askConfirm, confirmationDialog } = useConfirm();
+    const canDelete = useAuthStore(s => s.user?.role !== UserRole.PUBLIC_MEDICAL_OFFICIAL);
     const [patients, setPatients] = useState<Patient[]>([]);
     const [loading, setLoading] = useState(true);
-    const [search, setSearch] = useState('');
+    const [search, setSearchValue] = useState('');
+    const [page, setPage] = useState(1); const [total, setTotal] = useState(0);
+    const setSearch = (value: string) => { setSearchValue(value); setPage(1); };
     const [showForm, setShowForm] = useState(false);
     const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
     const [error, setError] = useState('');
+    const [saving, setSaving] = useState(false);
 
     const [form, setForm] = useState({
         firstName: '', lastName: '', dateOfBirth: '', gender: 'other',
@@ -33,19 +43,24 @@ export default function PatientsPage() {
         emergencyContact: '', medicalHistory: '', allergies: '',
     });
 
-    useEffect(() => { fetchPatients(); }, []);
 
-    const fetchPatients = async () => {
+
+
+
+    const fetchPatients = useCallback(async () => {
         try {
             setLoading(true);
-            const res = await api.get('/patients');
-            setPatients(res.data);
+            const res = await api.get('/patients', { params: { page, limit: 20, search } });
+            setPatients(res.data.items); setTotal(res.data.total);
+            if (res.data.total > 0 && page > Math.ceil(res.data.total / 20)) setPage(Math.ceil(res.data.total / 20));
         } catch (err: any) {
             setError(err.response?.data?.message || 'Failed to load patients');
         } finally {
             setLoading(false);
         }
-    };
+    }, [page, search]);
+
+    useEffect(() => { const timer = setTimeout(fetchPatients, 250); return () => clearTimeout(timer); }, [fetchPatients]);
 
     const resetForm = () => {
         setForm({
@@ -77,6 +92,8 @@ export default function PatientsPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (saving) return;
+        setSaving(true); setError('');
         try {
             const payload: Record<string, any> = {};
             for (const [key, value] of Object.entries(form)) {
@@ -93,11 +110,11 @@ export default function PatientsPage() {
         } catch (err: any) {
             const msg = err.response?.data?.message;
             setError(Array.isArray(msg) ? msg.join(', ') : msg || 'Failed to save patient');
-        }
+        } finally { setSaving(false); }
     };
 
     const handleDelete = async (id: string) => {
-        if (!confirm('Are you sure you want to delete this patient?')) return;
+        if (!await askConfirm('Are you sure you want to delete this patient?')) return;
         try {
             await api.delete(`/patients/${id}`);
             fetchPatients();
@@ -106,16 +123,14 @@ export default function PatientsPage() {
         }
     };
 
-    const filtered = patients.filter(p =>
-        `${p.firstName} ${p.lastName}`.toLowerCase().includes(search.toLowerCase()) ||
-        p.phone?.includes(search) || p.email?.toLowerCase().includes(search.toLowerCase())
-    );
+    const filtered = patients;
 
     return (
         <div className="flex flex-col min-h-full safe-top">
+            {confirmationDialog}
             <PageHeader
                 title="Patients"
-                subtitle={`${patients.length} registered`}
+                subtitle={`${total} registered`}
                 icon={Users}
                 iconBg="bg-blue-100 dark:bg-blue-900/30"
                 iconColor="text-blue-600 dark:text-blue-400"
@@ -165,7 +180,7 @@ export default function PatientsPage() {
                                                 {patient.firstName[0]}{patient.lastName[0]}
                                             </div>
                                             <div>
-                                                <h3 className="font-semibold text-foreground text-sm">{patient.firstName} {patient.lastName}</h3>
+                                                <h3 className="font-semibold text-foreground text-sm"><Link href={`/dashboard/patients/detail?id=${patient.id}`} className="hover:text-primary underline-offset-4 hover:underline">{patient.firstName} {patient.lastName}</Link></h3>
                                                 <Badge variant="default" size="sm">{patient.gender}</Badge>
                                             </div>
                                         </div>
@@ -173,7 +188,7 @@ export default function PatientsPage() {
                                             <button onClick={() => handleEdit(patient)} className="p-1.5 hover:bg-muted rounded-lg transition-colors" title="Edit">
                                                 <Edit2 size={14} className="text-muted-foreground" />
                                             </button>
-                                            <button onClick={() => handleDelete(patient.id)} className="p-1.5 hover:bg-destructive/10 rounded-lg transition-colors" title="Delete">
+                                            <button disabled={!canDelete} aria-label="Delete patient" onClick={() => handleDelete(patient.id)} className="p-1.5 hover:bg-destructive/10 rounded-lg transition-colors" title="Delete">
                                                 <Trash2 size={14} className="text-destructive" />
                                             </button>
                                         </div>
@@ -197,6 +212,7 @@ export default function PatientsPage() {
                 </div>
                 {/* Mobile Bottom Spacer */}
                 <div className="h-[80px] lg:hidden w-full flex-shrink-0" aria-hidden="true" />
+            <div className="container-app"><Pagination page={page} total={total} onChange={setPage} /></div>
             </main>
 
             {/* Modal Form */}
@@ -208,13 +224,14 @@ export default function PatientsPage() {
                 footer={
                     <div className="flex gap-3">
                         <button type="button" onClick={resetForm} className="flex-1 btn-secondary">Cancel</button>
-                        <button type="submit" form="patient-form" className="flex-1 btn-primary">
+                        <button type="submit" disabled={saving} form="patient-form" className="flex-1 btn-primary">
                             {editingPatient ? 'Update' : 'Create'} Patient
                         </button>
                     </div>
                 }
             >
                 <form id="patient-form" onSubmit={handleSubmit} className="space-y-4">
+                        {error && <ErrorBanner message={error} />}
                     <div className="grid grid-cols-2 gap-3">
                         <FormInput label="First Name" required value={form.firstName} onChange={e => setForm({ ...form, firstName: e.target.value })} />
                         <FormInput label="Last Name" required value={form.lastName} onChange={e => setForm({ ...form, lastName: e.target.value })} />

@@ -12,6 +12,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { AuditService } from '../audit/audit.service';
 import { ChatService } from './chat.service';
+import { UsersService } from '../users/users.service';
 import { MessageStatus } from './entities/message.entity';
 
 interface SocketMessage {
@@ -43,6 +44,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         private chatService: ChatService,
         private jwtService: JwtService,
         private configService: ConfigService,
+        private usersService: UsersService,
     ) {}
 
     async handleConnection(client: Socket) {
@@ -64,6 +66,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
             payload = this.jwtService.verify(token, {
                 secret: this.configService.get<string>('JWT_SECRET'),
             });
+            await this.usersService.findActive(payload.sub);
         } catch (err) {
             client.emit('auth_error', { message: 'Invalid or expired token' });
             client.disconnect();
@@ -76,6 +79,18 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         // Store verified identity on client
         client.data.userId = userId;
         client.data.username = username;
+        client.data.tokenExpires = payload.exp;
+
+        client.use(async (_packet, next) => {
+            try {
+                this.jwtService.verify(token, { secret: this.configService.get<string>('JWT_SECRET') });
+                await this.usersService.findActive(userId);
+                next();
+            } catch {
+                client.emit('auth_error', { message: 'Session expired or account inactive' });
+                client.disconnect();
+            }
+        });
 
         // Track user connection
         this.socketToUser.set(client.id, userId);
@@ -160,7 +175,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
             });
 
             // Broadcast to conversation room
-            this.server.to(`conversation:${data.conversationId}`).emit('new_message', {
+            await this.broadcastConversation(data.conversationId, 'new_message', {
                 ...message,
                 senderUsername: client.data.username,
             });
@@ -210,8 +225,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
             // Broadcast user message and AI response to the conversation room
             // (all client tabs for this user are in the conversation room)
-            this.server.to(`conversation:${data.conversationId}`).emit('new_message', result.userMessage);
-            this.server.to(`conversation:${data.conversationId}`).emit('new_message', result.aiResponse);
+            await this.broadcastConversation(data.conversationId, 'new_message', result.userMessage);
+            await this.broadcastConversation(data.conversationId, 'new_message', result.aiResponse);
 
             return { success: true, ...result };
         } catch (error) {
@@ -222,15 +237,16 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     @SubscribeMessage('typing')
-    handleTyping(
+    async handleTyping(
         @ConnectedSocket() client: Socket,
         @MessageBody() data: TypingIndicator,
     ) {
         const userId = client.data.userId;
         if (!userId) return;
 
+        try { await this.chatService.getConversation(userId, data.conversationId); } catch { return; }
         // Broadcast typing indicator to conversation room (except sender)
-        client.to(`conversation:${data.conversationId}`).emit('user_typing', {
+        await this.broadcastConversation(data.conversationId, 'user_typing', {
             userId,
             username: client.data.username,
             conversationId: data.conversationId,
@@ -278,7 +294,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
             // Notify caller that unread is cleared
             this.server.to(`user:${userId}`).emit('unread_cleared', { conversationId });
             // Notify all conversation participants that messages were read (read receipts)
-            this.server.to(`conversation:${conversationId}`).emit('message_status', {
+            await this.broadcastConversation(conversationId, 'message_status', {
                 conversationId,
                 status: MessageStatus.READ,
             });
@@ -305,7 +321,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
             );
 
             // Notify conversation room of status change
-            this.server.to(`conversation:${data.conversationId}`).emit('message_status', {
+            await this.broadcastConversation(data.conversationId, 'message_status', {
                 conversationId: data.conversationId,
                 status: MessageStatus.DELIVERED,
             });
@@ -314,6 +330,18 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         } catch (error) {
             return { error: 'Failed to mark as delivered' };
         }
+    }
+
+    private async broadcastConversation(conversationId: string, event: string, data: any) {
+        const sockets = await this.server.in(`conversation:${conversationId}`).fetchSockets();
+        await Promise.all(sockets.map(async socket => {
+            try {
+                if (!socket.data.tokenExpires || socket.data.tokenExpires * 1000 <= Date.now()) throw new Error('Expired');
+                await this.usersService.findActive(socket.data.userId);
+                await this.chatService.getConversation(socket.data.userId, conversationId);
+                socket.emit(event, data);
+            } catch { socket.leave(`conversation:${conversationId}`); }
+        }));
     }
 
     // Helper method to check if a user is online

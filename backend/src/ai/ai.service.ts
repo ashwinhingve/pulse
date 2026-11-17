@@ -14,13 +14,16 @@ export class AiService {
     ) {}
 
     /**
-     * Analyze symptoms using BioMistral-7B with AIIMS guidelines context
+     * Analyze symptoms using the configured AI model with AIIMS guidelines context
      */
     async analyzeSymptoms(data: {
         symptoms: string;
         vitals?: Record<string, any>;
         medicalHistory?: string;
     }): Promise<{
+        source: string;
+        model: string;
+        provider: string;
         analysis: string;
         suggestions: string[];
         urgency: 'low' | 'medium' | 'high';
@@ -33,7 +36,7 @@ export class AiService {
             notes: data.medicalHistory,
         });
 
-        this.logger.log('Analyzing symptoms with BioMistral-7B (anonymized)');
+        this.logger.log('Analyzing symptoms with the configured AI model (anonymized)');
 
         // Search guidelines for relevant context
         const guidelineContext = this.guidelinesService.buildContextForQuery(data.symptoms);
@@ -43,7 +46,7 @@ export class AiService {
             category: g.category,
         }));
 
-        const prompt = `You are BioMistral-7B, an expert medical AI assistant for military and public health professionals.
+        const prompt = `You are a clinical decision-support AI assistant for military and public health professionals.
 Use your full medical knowledge to analyze the patient data below. Additionally, reference the AIIMS Antibiotic Policy guidelines when relevant.
 
 ${guidelineContext ? `Local AIIMS Guidelines (use as additional reference):\n${guidelineContext}\n` : ''}
@@ -70,12 +73,13 @@ IMPORTANT: This is decision support only, not diagnosis. Always recommend consul
         const analysisText = result.text || this.buildGuidelineBasedAnalysis(data.symptoms);
 
         return {
+            source: result.text ? 'model' : 'guidelines-fallback',
+            model: result.model, provider: result.provider,
             analysis: analysisText,
             suggestions: this.extractSuggestions(analysisText),
             urgency: this.determineUrgency(analysisText),
             guidelines: relevantGuidelines,
-            disclaimer:
-                'AI-generated decision support only (BioMistral-7B + AIIMS Guidelines). Not a diagnosis. Consult qualified medical personnel.',
+            disclaimer: result.text ? 'AI-generated decision support only. Not a diagnosis. Clinician review required.' : 'Guideline fallback only. The AI model is unavailable; no AI interpretation was performed.',
         };
     }
 
@@ -87,10 +91,12 @@ IMPORTANT: This is decision support only, not diagnosis. Always recommend consul
         references: string[];
         guidelines: { id: string; title: string; category: string }[];
         disclaimer: string;
-        source: 'biomistral' | 'guidelines-fallback';
+        source: 'model' | 'guidelines-fallback';
+        model: string;
+        provider: string;
     }> {
         const { anonymized } = this.anonymizationService.anonymize(query);
-        this.logger.log('Querying protocol with BioMistral-7B (anonymized)');
+        this.logger.log('Querying protocol with the configured AI model (anonymized)');
 
         const guidelineContext = this.guidelinesService.buildContextForQuery(query);
         const relevantGuidelines = this.guidelinesService.search(query).map(g => ({
@@ -99,7 +105,7 @@ IMPORTANT: This is decision support only, not diagnosis. Always recommend consul
             category: g.category,
         }));
 
-        const prompt = `You are BioMistral-7B, an expert medical AI assistant with comprehensive medical knowledge.
+        const prompt = `You are a clinical decision-support AI assistant with comprehensive medical knowledge.
 Answer the following medical query using your full training knowledge. When AIIMS Antibiotic Policy guidelines are available below, incorporate them as additional evidence.
 
 ${guidelineContext ? `Local AIIMS Guidelines (reference when relevant):\n${guidelineContext}\n` : ''}
@@ -125,18 +131,19 @@ Keep response concise, evidence-based, and actionable.`;
         return {
             protocol: protocolText,
             references: isBioMistralResponse
-                ? ['BioMistral-7B Medical AI', 'AIIMS Antibiotic Policy', 'ICMR Guidelines', 'IDSA Guidelines']
+                ? [`AI-generated response (${result.model})`, ...relevantGuidelines.map(g => g.title)]
                 : ['AIIMS Antibiotic Policy (offline fallback)'],
             guidelines: relevantGuidelines,
             disclaimer: isBioMistralResponse
-                ? 'AI-generated guidance (BioMistral-7B + AIIMS Guidelines). Always follow official medical protocols.'
-                : 'BioMistral-7B is offline. Showing guideline-based fallback only. Check HuggingFace API key.',
-            source: isBioMistralResponse ? 'biomistral' : 'guidelines-fallback',
+                ? 'AI-generated guidance (the configured AI model + AIIMS Guidelines). Always follow official medical protocols.'
+                : 'the configured AI model is offline. Showing guideline-based fallback only. Check configured provider credential.',
+            source: isBioMistralResponse ? 'model' : 'guidelines-fallback',
+            model: result.model, provider: result.provider,
         };
     }
 
     /**
-     * Analyze medical case using BioMistral-7B with guidelines
+     * Analyze medical case using the configured AI model with guidelines
      */
     async analyzeMedicalCase(caseData: {
         severity: string;
@@ -158,7 +165,7 @@ Keep response concise, evidence-based, and actionable.`;
             notes: caseData.medicalHistory,
         });
 
-        this.logger.log('Analyzing medical case with BioMistral-7B (anonymized)');
+        this.logger.log('Analyzing medical case with the configured AI model (anonymized)');
 
         const combinedQuery = `${caseData.chiefComplaint} ${caseData.symptoms}`;
         const guidelineContext = this.guidelinesService.buildContextForQuery(combinedQuery);
@@ -168,7 +175,7 @@ Keep response concise, evidence-based, and actionable.`;
             category: g.category,
         }));
 
-        const prompt = `You are BioMistral-7B, an expert medical AI for clinical case analysis.
+        const prompt = `You are a clinical decision-support AI for clinical case analysis.
 Use your full medical knowledge to analyze this case. Reference AIIMS guidelines when applicable.
 
 ${guidelineContext ? `Local AIIMS Guidelines (reference when relevant):\n${guidelineContext}\n` : ''}
@@ -201,12 +208,12 @@ CRITICAL: This is decision support only. Always recommend consulting a physician
             similarConditions: this.extractSimilarConditions(analysisText),
             guidelines: relevantGuidelines,
             disclaimer:
-                'AI-generated decision support only (BioMistral-7B + AIIMS Guidelines). Not a diagnosis. Consult qualified medical personnel.',
+                'AI-generated decision support only (the configured AI model + AIIMS Guidelines). Not a diagnosis. Consult qualified medical personnel.',
         };
     }
 
     /**
-     * General medical assistance for chat - powered by BioMistral-7B
+     * General medical assistance for chat - powered by the configured AI model
      */
     async getMedicalAssistance(data: {
         query: string;
@@ -218,7 +225,7 @@ CRITICAL: This is decision support only. Always recommend consulting a physician
         disclaimer: string;
     }> {
         const { anonymized } = this.anonymizationService.anonymize(data.query);
-        this.logger.log('Processing medical assistance query with BioMistral-7B (anonymized)');
+        this.logger.log('Processing medical assistance query with the configured AI model (anonymized)');
 
         const guidelineContext = this.guidelinesService.buildContextForQuery(data.query);
         const relevantGuidelines = this.guidelinesService.search(data.query).map(g => ({
@@ -229,7 +236,7 @@ CRITICAL: This is decision support only. Always recommend consulting a physician
 
         const systemContext =
             data.systemPrompt ||
-            `You are BioMistral-7B, an expert medical AI assistant for military and public health professionals.
+            `You are a clinical decision-support AI assistant for military and public health professionals.
 You have comprehensive medical knowledge from your training and also have access to AIIMS Antibiotic Policy guidelines.
 Your role is to provide helpful, accurate, and detailed medical information using your full knowledge base.
 
@@ -261,7 +268,7 @@ Provide a comprehensive, evidence-based response using your medical knowledge. R
             response: responseText,
             guidelines: relevantGuidelines,
             disclaimer:
-                'AI-generated guidance (BioMistral-7B + AIIMS Guidelines) for decision support only. Always consult qualified medical professionals.',
+                'AI-generated guidance (the configured AI model + AIIMS Guidelines) for decision support only. Always consult qualified medical professionals.',
         };
     }
 
@@ -319,6 +326,7 @@ Provide a comprehensive, evidence-based response using your medical knowledge. R
      */
     getStatus() {
         return {
+            ...this.bioMistralService.getStatus(),
             bioMistralProvider: this.bioMistralService.getProvider(),
             guidelinesLoaded: this.guidelinesService.getAll().length,
             guidelineCategories: this.guidelinesService.getCategories(),
@@ -331,14 +339,14 @@ Provide a comprehensive, evidence-based response using your medical knowledge. R
     private buildGuidelineBasedAnalysis(query: string): string {
         const relevant = this.guidelinesService.search(query);
         if (relevant.length === 0) {
-            return `**BioMistral-7B is currently unavailable** and no matching AIIMS guidelines were found for your query.
+            return `**the configured AI model is currently unavailable** and no matching AIIMS guidelines were found for your query.
 
 **Your query:** "${query.substring(0, 150)}"
 
-This topic may be outside the scope of the AIIMS Antibiotic Policy guidelines. When BioMistral-7B is online, it can answer any medical question using its full training knowledge.
+This topic may be outside the scope of the AIIMS Antibiotic Policy guidelines. When the configured AI model is online, it can answer any medical question using its full training knowledge.
 
 **Please try:**
-- Ensure the HuggingFace API key is configured in backend .env
+- Ensure the configured provider credential is configured in backend .env
 - Wait 30 seconds and retry (model may be cold-starting)
 - Consult qualified medical personnel directly
 
@@ -346,7 +354,7 @@ This topic may be outside the scope of the AIIMS Antibiotic Policy guidelines. W
         }
 
         const g = relevant[0];
-        return `**Note:** BioMistral-7B is currently unavailable. Showing relevant AIIMS guideline instead.
+        return `**Note:** the configured AI model is currently unavailable. Showing relevant AIIMS guideline instead.
 
 ## ${g.title}
 
@@ -354,25 +362,25 @@ ${g.content.substring(0, 2000)}
 
 **Source:** ${g.source}
 
-*For a comprehensive AI-powered answer, ensure BioMistral-7B is connected.*`;
+*For a comprehensive AI-powered answer, ensure the configured AI model is connected.*`;
     }
 
     private buildGuidelineBasedProtocol(query: string): string {
         const relevant = this.guidelinesService.search(query);
         if (relevant.length === 0) {
-            return `**BioMistral-7B is currently unavailable** and no matching AIIMS guidelines were found for: "${query.substring(0, 150)}"
+            return `**the configured AI model is currently unavailable** and no matching AIIMS guidelines were found for: "${query.substring(0, 150)}"
 
-This query requires BioMistral-7B's medical knowledge to answer properly. The AIIMS Antibiotic Policy covers: respiratory infections, GI/hepatobiliary, skin/bone, CNS, cardiovascular, urogenital, febrile illness, and bloodstream infections.
+This query requires the configured AI model's medical knowledge to answer properly. The AIIMS Antibiotic Policy covers: respiratory infections, GI/hepatobiliary, skin/bone, CNS, cardiovascular, urogenital, febrile illness, and bloodstream infections.
 
 **Please try:**
-- Ensure the HuggingFace API key is configured
+- Ensure the configured provider credential is configured
 - Wait 30 seconds and retry (model may be cold-starting)
 
 *Decision support system temporarily limited.*`;
         }
 
         const g = relevant[0];
-        return `**Note:** BioMistral-7B is currently unavailable. Showing matching AIIMS guideline.
+        return `**Note:** the configured AI model is currently unavailable. Showing matching AIIMS guideline.
 
 ## ${g.title}
 
@@ -384,12 +392,12 @@ ${g.content.substring(0, 2000)}
     private buildGuidelineBasedResponse(query: string): string {
         const relevant = this.guidelinesService.search(query);
         if (relevant.length === 0) {
-            return `**BioMistral-7B is currently unavailable** and your query doesn't match any AIIMS Antibiotic Policy guideline.
+            return `**the configured AI model is currently unavailable** and your query doesn't match any AIIMS Antibiotic Policy guideline.
 
 **Your query:** "${query.substring(0, 150)}"
 
-BioMistral-7B can answer any medical question when online. Please check that:
-1. The HuggingFace API key is set in the backend .env file
+the configured AI model can answer any medical question when online. Please check that:
+1. The configured provider credential is set in the backend .env file
 2. The model may need 30 seconds to cold-start
 
 *Decision support system temporarily limited to AIIMS guidelines only.*`;
@@ -399,11 +407,11 @@ BioMistral-7B can answer any medical question when online. Please check that:
             .slice(0, 3)
             .map(g => `### ${g.title} (${g.category})\n${g.content.substring(0, 500)}...`);
 
-        return `**Note:** BioMistral-7B is unavailable. Showing matching AIIMS guidelines:
+        return `**Note:** the configured AI model is unavailable. Showing matching AIIMS guidelines:
 
 ${parts.join('\n\n')}
 
-*For comprehensive answers beyond AIIMS guidelines, ensure BioMistral-7B is connected.*`;
+*For comprehensive answers beyond AIIMS guidelines, ensure the configured AI model is connected.*`;
     }
 
     private extractSimilarConditions(text: string): string[] {

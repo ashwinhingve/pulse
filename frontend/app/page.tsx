@@ -44,12 +44,12 @@ function FloatingShapes() {
 /* ── Feature cards ─────────────────────────── */
 
 const features = [
-    { icon: Users, title: 'Patient Management', desc: 'Comprehensive patient records, histories, and real-time monitoring with military-grade encryption.', color: 'from-medical-teal-400 to-medical-teal-600' },
-    { icon: Bot, title: 'AI Clinical Assistant', desc: 'BioMistral-powered diagnostics, antibiotic protocols, and evidence-based treatment recommendations.', color: 'from-medical-blue-400 to-medical-blue-600' },
-    { icon: BarChart3, title: 'Analytics & Reports', desc: 'Real-time dashboards, predictive analytics, and department performance insights at a glance.', color: 'from-medical-purple-400 to-medical-purple-500' },
-    { icon: Activity, title: 'ECG Analysis', desc: 'AI-powered ECG readings with instant anomaly detection and pattern recognition for rapid diagnosis.', color: 'from-medical-cyan-400 to-medical-cyan-500' },
-    { icon: Stethoscope, title: 'Doctor Network', desc: 'Seamless collaboration between specialists with secure referral systems and case sharing.', color: 'from-emerald-400 to-emerald-600' },
-    { icon: Lock, title: 'Military-Grade Security', desc: 'End-to-end encryption, role-based access, and full HIPAA/military compliance audit trails.', color: 'from-amber-400 to-amber-600' },
+    { icon: Users, title: 'Patient Management', desc: 'Manage patient records and histories alongside cases, diagnoses, and reports.', color: 'from-medical-teal-400 to-medical-teal-600' },
+    { icon: Bot, title: 'AI Clinical Assistant', desc: 'AI-assisted protocol research and guideline lookup with clearly identified fallback responses.', color: 'from-medical-blue-400 to-medical-blue-600' },
+    { icon: BarChart3, title: 'Analytics & Reports', desc: 'Case summaries, recent activity, and structured clinical reports in one workspace.', color: 'from-medical-purple-400 to-medical-purple-500' },
+    { icon: Activity, title: 'ECG Analysis', desc: 'Upload ECG reports for experimental AI-assisted review by qualified clinicians.', color: 'from-medical-cyan-400 to-medical-cyan-500' },
+    { icon: Stethoscope, title: 'Doctor Network', desc: 'A doctor directory and authenticated messaging for clinician collaboration.', color: 'from-emerald-400 to-emerald-600' },
+    { icon: Lock, title: 'Access & Activity Controls', desc: 'Role-based access, case and document clearance checks, encrypted document files, and recorded activity.', color: 'from-amber-400 to-amber-600' },
 ];
 
 /* ── Page ───────────────────────────────────── */
@@ -73,7 +73,7 @@ export default function LandingPage() {
                     <Logo size="md" />
                     <div className="hidden md:flex items-center gap-8">
                         <a href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors font-medium">Features</a>
-                        <a href="#stats" className="text-sm text-muted-foreground hover:text-foreground transition-colors font-medium">Impact</a>
+                        <a href="#stats" className="text-sm text-muted-foreground hover:text-foreground transition-colors font-medium">Platform</a>
                         <a href="#security" className="text-sm text-muted-foreground hover:text-foreground transition-colors font-medium">Security</a>
                     </div>
                     <div className="flex items-center gap-3">
@@ -96,7 +96,7 @@ export default function LandingPage() {
                         transition={{ duration: 0.5 }}
                         className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6"
                     >
-                        <Zap size={14} /> AI-Powered Healthcare Platform
+                        <Zap size={14} /> Clinical Workspace · Demonstration MVP
                     </motion.div>
 
                     <motion.h1
@@ -118,7 +118,7 @@ export default function LandingPage() {
                         className="mt-6 text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed"
                     >
                         PulseLogic centralizes patient data, delivers real-time analytics, and provides
-                        AI-driven clinical decision support — all secured with military-grade encryption.
+                        A demonstration workspace for clinical records, collaboration, and AI-assisted research.
                     </motion.p>
 
                     <motion.div
@@ -137,6 +137,7 @@ export default function LandingPage() {
                 </div>
 
                 {/* ── Dashboard preview mockup ── */}
+                <p className="text-center text-xs text-muted-foreground mb-3">Illustrative preview · sample data</p>
                 <motion.div
                     initial={{ opacity: 0, y: 40 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -187,15 +188,15 @@ export default function LandingPage() {
                 </motion.div>
             </section>
 
-            {/* ── Stats ── */}
+            {/* ── Platform facts ── */}
             <section id="stats" className="relative z-10 py-16 border-y border-border/30">
                 <div className="max-w-5xl mx-auto px-6">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
                         {[
-                            { end: 2847, suffix: '+', label: 'Patients Managed' },
-                            { end: 128, suffix: '+', label: 'Medical Officers' },
-                            { end: 99, suffix: '.9%', label: 'Uptime SLA' },
-                            { end: 15, suffix: 'ms', label: 'Avg Response' },
+                            { end: 3, suffix: '', label: 'User Roles' },
+                            { end: 4, suffix: '', label: 'Clearance Levels' },
+                            { end: 6, suffix: '', label: 'Document Categories' },
+                            { end: 1, suffix: '', label: 'Connected Workspace' },
                         ].map((stat, i) => (
                             <motion.div
                                 key={stat.label}
@@ -264,16 +265,16 @@ export default function LandingPage() {
                             Built for Trust
                         </h2>
                         <p className="text-muted-foreground max-w-2xl mx-auto mb-10">
-                            HIPAA-compliant, military-grade encryption, and comprehensive audit trails ensure your data
-                            is protected at every layer.
+                            Role and clearance checks help control access, while document encryption and recorded activity
+                            support the demonstration workflow. This MVP has not established clinical or regulatory deployment readiness.
                         </p>
                     </motion.div>
 
                     <div className="grid md:grid-cols-3 gap-4">
                         {[
-                            { title: 'End-to-End Encryption', desc: 'AES-256 encryption for data at rest and in transit' },
+                            { title: 'Encrypted Documents', desc: 'Uploaded document files use AES-256 encryption at rest' },
                             { title: 'Role-Based Access', desc: 'Granular clearance levels from Unclassified to Top Secret' },
-                            { title: 'Full Audit Trail', desc: 'Every action logged with tamper-proof timestamping' },
+                            { title: 'Recorded Activity', desc: 'Versioned audit entries with integrity verification and explicit legacy status' },
                         ].map((item, i) => (
                             <motion.div
                                 key={item.title}
