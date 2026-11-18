@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { authenticatedFetch } from '@/lib/session';
+
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Activity, Upload, FileImage, Loader2, Trash2, Shield, CheckCircle2,
@@ -40,6 +42,7 @@ interface AIAnalysis {
 }
 
 interface UploadedDoc {
+    analysisError?: string;
     id: string;
     originalFileName: string;
     isAnalyzed: boolean;
@@ -69,10 +72,10 @@ function ConfidenceRing({ score }: { score: number }) {
                     strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
                     transform="rotate(-90 36 36)" />
                 <text x="36" y="41" textAnchor="middle" fontSize="14" fontWeight="700" fill={color}>
-                    {Math.round(pct * 100)}%
+                    {pct ? `${Math.round(pct * 100)}%` : 'N/A'}
                 </text>
             </svg>
-            <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Confidence</span>
+            <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Model estimate (unvalidated)</span>
         </div>
     );
 }
@@ -90,6 +93,8 @@ export default function ECGPage() {
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [error, setError] = useState('');
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
 
     /* Token resolution: Zustand → localStorage → NextAuth */
     const getToken = useCallback(async (): Promise<string | null> => {
@@ -110,13 +115,15 @@ export default function ECGPage() {
     const startPolling = useCallback((docId: string) => {
         if (pollRef.current) clearInterval(pollRef.current);
         setIsAnalyzing(true);
+        const started = Date.now();
         pollRef.current = setInterval(async () => {
+            if (Date.now() - started > 120000) { clearInterval(pollRef.current!); pollRef.current = null; setIsAnalyzing(false); setError('Analysis timed out. Check Documents for the saved upload before retrying.'); return; }
             try {
                 const token = await getToken();
-                const res = await fetch(`${API_URL}/documents/${docId}`, {
+                const res = await authenticatedFetch(`${API_URL}/documents/${docId}`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
-                if (!res.ok) return;
+                if (!res.ok) throw new Error(`Analysis status unavailable (${res.status})`);
                 const updated: UploadedDoc = await res.json();
                 if (updated.isAnalyzed && !updated.isAnalyzing) {
                     clearInterval(pollRef.current!);
@@ -128,8 +135,11 @@ export default function ECGPage() {
                     clearInterval(pollRef.current!);
                     pollRef.current = null;
                     setIsAnalyzing(false);
+                    setError(updated.analysisError || 'Analysis did not complete. Retry from Documents.');
                 }
-            } catch { /* keep polling */ }
+            } catch (err: any) {
+                clearInterval(pollRef.current!); pollRef.current = null; setIsAnalyzing(false); setError(err.message || 'Unable to check analysis status.');
+            }
         }, 3000);
     }, [getToken]);
 
@@ -181,7 +191,7 @@ export default function ECGPage() {
             form.append('analyzeAfterUpload', 'true');
             if (notes.trim()) form.append('notes', notes.trim());
 
-            const res = await fetch(`${API_URL}/documents/upload`, {
+            const res = await authenticatedFetch(`${API_URL}/documents/upload`, {
                 method: 'POST',
                 headers: { Authorization: `Bearer ${token}` },
                 body: form,
@@ -218,7 +228,7 @@ export default function ECGPage() {
         setError('');
         try {
             const token = await getToken();
-            const res = await fetch(`${API_URL}/documents/${doc.id}/analyze`, {
+            const res = await authenticatedFetch(`${API_URL}/documents/${doc.id}/analyze`, {
                 method: 'POST',
                 headers: { Authorization: `Bearer ${token}` },
             });
@@ -247,7 +257,7 @@ export default function ECGPage() {
             />
 
             <main className="flex-1 w-full">
-                <div className="container-app space-y-5 pb-24 lg:pb-8 max-w-[1600px] animate-fade-in">
+                <div className="container-app space-y-5 pb-8 max-w-4xl animate-fade-in">
 
                     {/* ── Upload Card ── */}
                     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}

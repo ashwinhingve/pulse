@@ -1,3 +1,5 @@
+import { MedicalCase } from '../medical/entities/medical-case.entity';
+import { IsNull } from 'typeorm';
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -8,7 +10,7 @@ import { SendMessageDto, SendAIMessageDto } from './dto/send-message.dto';
 import { User } from '../users/user.entity';
 import { AuditService } from '../audit/audit.service';
 import { AiService } from '../ai/ai.service';
-import { ROLE_PERMISSIONS } from '../common/enums/roles.enum';
+import { ROLE_PERMISSIONS, UserRole } from '../common/enums/roles.enum';
 
 @Injectable()
 export class ChatService {
@@ -24,6 +26,7 @@ export class ChatService {
     ) {}
 
     async createConversation(userId: string, dto: CreateConversationDto): Promise<Conversation> {
+        if (dto.caseId) await this.requireCaseAccess(userId, dto.caseId);
         const user = await this.userRepository.findOne({ where: { id: userId } });
         if (!user) {
             throw new NotFoundException('User not found');
@@ -43,22 +46,18 @@ export class ChatService {
                 throw new ForbiddenException('You do not have permission to chat with other users');
             }
 
-            // Check for existing conversation
-            const existing = await this.conversationRepository.findOne({
-                where: [
-                    { participant1Id: userId, participant2Id: dto.recipientId, isActive: true },
-                    { participant1Id: dto.recipientId, participant2Id: userId, isActive: true },
-                ],
-            });
-
-            if (existing) {
-                return existing;
-            }
-
-            const recipient = await this.userRepository.findOne({ where: { id: dto.recipientId } });
-            if (!recipient) {
-                throw new NotFoundException('Recipient not found');
-            }
+            const recipient = await this.userRepository.findOne({ where: { id: dto.recipientId, deletedAt: IsNull(), isActive: true } });
+            if (!recipient) throw new NotFoundException('Recipient not found');
+            if (dto.caseId) await this.requireCaseAccess(recipient.id, dto.caseId);
+            const allowed = recipient.role === UserRole.ADMIN ? (permissions as any).canChatWithAdmins :
+                recipient.role === UserRole.ARMY_MEDICAL_OFFICER ? permissions.canChatWithArmyOfficers : permissions.canChatWithPublicOfficials;
+            if (!allowed || recipient.id === userId) throw new ForbiddenException('This chat partner is not permitted');
+            const candidates = await this.conversationRepository.find({ where: [
+                { participant1Id: userId, participant2Id: dto.recipientId, isActive: true },
+                { participant1Id: dto.recipientId, participant2Id: userId, isActive: true },
+            ] });
+            const existing = candidates.find(conversation => (conversation.metadata?.caseId || null) === (dto.caseId || null));
+            if (existing) return existing;
 
             conversation = this.conversationRepository.create({
                 type: ConversationType.USER_TO_USER,
@@ -78,7 +77,7 @@ export class ChatService {
                 type: ConversationType.USER_TO_AI,
                 title: dto.title || 'AI Assistant',
                 userId,
-                aiModel: dto.aiModel || 'biomistral-7b',
+                aiModel: 'configured-provider',
                 metadata: { caseId: dto.caseId, context: dto.context },
             });
         }
@@ -108,7 +107,11 @@ export class ChatService {
             order: { lastMessageAt: 'DESC' },
         });
 
-        return userConversations;
+        const visible = await Promise.all(userConversations.map(async conversation => {
+            try { if (conversation.metadata?.caseId) await this.requireCaseAccess(userId, conversation.metadata.caseId); return conversation; }
+            catch { return null; }
+        }));
+        return visible.filter((conversation): conversation is Conversation => conversation !== null);
     }
 
     async getConversation(userId: string, conversationId: string): Promise<Conversation> {
@@ -131,6 +134,7 @@ export class ChatService {
             throw new ForbiddenException('You are not a participant in this conversation');
         }
 
+        if (conversation.metadata?.caseId) await this.requireCaseAccess(userId, conversation.metadata.caseId);
         return conversation;
     }
 
@@ -303,12 +307,28 @@ export class ChatService {
         await this.conversationRepository.update(conversationId, { unreadCount: 0 });
     }
 
+    private async requireCaseAccess(userId: string, caseId: string): Promise<void> {
+        const user = await this.userRepository.findOne({ where: { id: userId, deletedAt: IsNull() } });
+        const record = await this.conversationRepository.manager.getRepository(MedicalCase).findOne({ where: { id: caseId, deletedAt: IsNull() } });
+        if (!user || !record || record.clearanceRequired > user.clearanceLevel) throw new ForbiddenException('Case access denied');
+    }
+
+    async authorizeAttachment(userId: string, filename: string): Promise<void> {
+        const message = await this.messageRepository.createQueryBuilder('message')
+            .where("message.metadata -> 'attachments' @> CAST(:attachment AS jsonb)", {
+                attachment: JSON.stringify([`/api/chat/attachments/${filename}`]),
+            }).getOne();
+        if (!message) throw new NotFoundException('Attachment not found');
+        await this.getConversation(userId, message.conversationId);
+    }
+
     async updateMessageStatus(
         conversationId: string,
         excludeSenderId: string,
         fromStatus: MessageStatus,
         toStatus: MessageStatus,
     ): Promise<void> {
+        await this.getConversation(excludeSenderId, conversationId);
         await this.messageRepository
             .createQueryBuilder()
             .update(Message)

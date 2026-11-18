@@ -3,6 +3,8 @@ import { UserRole, ClearanceLevel } from './index';
 
 declare module 'next-auth' {
     interface User {
+        error?: string;
+        mfaEnabled?: boolean;
         id: string;
         email?: string;
         name: string;
@@ -22,7 +24,10 @@ declare module 'next-auth' {
     }
 
     interface Session {
+        error?: string;
+        mfaEnabled?: boolean;
         user: {
+            mfaEnabled?: boolean;
             id: string;
             email?: string;
             name: string;
@@ -44,6 +49,8 @@ declare module 'next-auth' {
 
 declare module 'next-auth/jwt' {
     interface JWT {
+        error?: string;
+        mfaEnabled?: boolean;
         id: string;
         username: string;
         fullName?: string;

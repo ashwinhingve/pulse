@@ -1,7 +1,10 @@
-import { IsString, IsEnum, IsOptional, IsObject, IsNumber, Min, Max } from 'class-validator';
+import { IsString, IsEnum, IsOptional, IsObject, IsNumber, IsUUID, IsInt, Min, Max } from 'class-validator';
 import { CaseSeverity } from '../entities/medical-case.entity';
 
 export class CreateMedicalCaseDto {
+    @IsUUID()
+    @IsOptional()
+    patientId?: string | null;
     @IsString()
     patientCode: string; // Anonymized code, NOT real identity
 
@@ -31,9 +34,9 @@ export class CreateMedicalCaseDto {
     @IsOptional()
     plan?: string;
 
-    @IsNumber()
+    @IsInt()
     @Min(0)
-    @Max(2)
+    @Max(3)
     @IsOptional()
     clearanceRequired?: number;
 }

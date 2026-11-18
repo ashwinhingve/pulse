@@ -7,6 +7,8 @@ import {
     MinLength,
     IsOptional,
     IsObject,
+    Min,
+    Max,
 } from 'class-validator';
 import { UserRole, ClearanceLevel, UserStatus } from '../../common/enums/roles.enum';
 
@@ -29,6 +31,8 @@ export class CreateUserDto {
     role?: UserRole;
 
     @IsInt()
+    @Min(0)
+    @Max(3)
     @IsOptional()
     clearanceLevel?: ClearanceLevel;
 

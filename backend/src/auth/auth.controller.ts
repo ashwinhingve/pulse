@@ -7,6 +7,8 @@ import {
     Get,
     HttpCode,
     HttpStatus,
+    ClassSerializerInterceptor,
+    UseInterceptors,
     Ip,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
@@ -19,6 +21,7 @@ import { UsersService } from '../users/users.service';
 import { UserStatus } from '../common/enums/roles.enum';
 
 @Controller('auth')
+@UseInterceptors(ClassSerializerInterceptor)
 export class AuthController {
     constructor(
         private authService: AuthService,

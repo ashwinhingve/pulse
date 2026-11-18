@@ -1,4 +1,4 @@
-import { IsEnum, IsOptional, IsString, IsDateString, IsBoolean } from 'class-validator';
+import { IsEnum, IsOptional, IsString, IsDateString, IsBoolean, IsUUID } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { DocumentType } from '../entities/medical-document.entity';
 
@@ -7,11 +7,11 @@ export class CreateDocumentDto {
     documentType: DocumentType;
 
     @IsOptional()
-    @IsString()
+    @IsUUID()
     patientId?: string;
 
     @IsOptional()
-    @IsString()
+    @IsUUID()
     caseId?: string;
 
     @IsOptional()
@@ -31,7 +31,7 @@ export class CreateDocumentDto {
     notes?: string;
 
     @IsOptional()
-    @Transform(({ value }) => value === 'true' || value === true)
+    @Transform(({ value, obj }) => { const raw = obj.analyzeAfterUpload ?? value; return raw === 'true' || raw === true; })
     @IsBoolean()
     analyzeAfterUpload?: boolean;
 }

@@ -1,11 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useConfirm } from '@/hooks/useConfirm';
+
+import { useState, useEffect, useCallback } from 'react';
+import ReportDetail from '@/components/ReportDetail';
+import { useAuthStore, UserRole } from '@/lib/store/auth';
 import { motion } from 'framer-motion';
 import {
     FileText, Plus, Edit2, Trash2,
     User, Stethoscope, Calendar,
 } from 'lucide-react';
+import Pagination from '@/components/ui/Pagination';
 import { api } from '@/lib/api';
 import type { MedicalReport, Patient, Doctor } from '@/types';
 import PageHeader from '@/components/ui/PageHeader';
@@ -28,14 +33,20 @@ const REPORT_TYPES: Record<string, { label: string; variant: 'info' | 'purple' |
 };
 
 export default function ReportsPage() {
+    const { askConfirm, confirmationDialog } = useConfirm();
+    const [viewReport, setViewReport] = useState('');
+    const canDelete = useAuthStore(s => s.user?.role !== UserRole.PUBLIC_MEDICAL_OFFICIAL);
     const [reports, setReports] = useState<MedicalReport[]>([]);
     const [patients, setPatients] = useState<Patient[]>([]);
     const [doctors, setDoctors] = useState<Doctor[]>([]);
     const [loading, setLoading] = useState(true);
-    const [search, setSearch] = useState('');
+    const [search, setSearchValue] = useState('');
+    const [page, setPage] = useState(1); const [total, setTotal] = useState(0);
+    const setSearch = (value: string) => { setSearchValue(value); setPage(1); };
     const [showForm, setShowForm] = useState(false);
     const [editingReport, setEditingReport] = useState<MedicalReport | null>(null);
     const [error, setError] = useState('');
+    const [saving, setSaving] = useState(false);
 
     const [form, setForm] = useState({
         title: '', type: 'lab', findings: '', recommendations: '',
@@ -43,29 +54,33 @@ export default function ReportsPage() {
     });
 
     useEffect(() => {
-        fetchReports();
         fetchPatients();
         fetchDoctors();
     }, []);
 
-    const fetchReports = async () => {
+
+
+    const fetchReports = useCallback(async () => {
         try {
             setLoading(true);
-            const res = await api.get('/reports');
-            setReports(res.data);
+            const res = await api.get('/reports', { params: { page, limit: 20, search } });
+            setReports(res.data.items); setTotal(res.data.total);
+            if (res.data.total > 0 && page > Math.ceil(res.data.total / 20)) setPage(Math.ceil(res.data.total / 20));
         } catch (err: any) {
             setError(err.response?.data?.message || 'Failed to load reports');
         } finally {
             setLoading(false);
         }
-    };
+    }, [page, search]);
+
+    useEffect(() => { const timer = setTimeout(fetchReports, 250); return () => clearTimeout(timer); }, [fetchReports]);
 
     const fetchPatients = async () => {
-        try { const res = await api.get('/patients'); setPatients(res.data); } catch {}
+        try { const res = await api.get('/patients'); setPatients(res.data); } catch { setError('Patient choices unavailable. Retry before saving.'); }
     };
 
     const fetchDoctors = async () => {
-        try { const res = await api.get('/doctors'); setDoctors(res.data); } catch {}
+        try { const res = await api.get('/doctors'); setDoctors(res.data); } catch { setError('Doctor choices unavailable. Retry before saving.'); }
     };
 
     const resetForm = () => {
@@ -90,6 +105,8 @@ export default function ReportsPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (saving) return;
+        setSaving(true); setError('');
         try {
             const payload = { ...form };
             if (!payload.diagnosisId) delete (payload as any).diagnosisId;
@@ -103,11 +120,11 @@ export default function ReportsPage() {
             fetchReports();
         } catch (err: any) {
             setError(err.response?.data?.message || 'Failed to save report');
-        }
+        } finally { setSaving(false); }
     };
 
     const handleDelete = async (id: string) => {
-        if (!confirm('Are you sure you want to delete this report?')) return;
+        if (!await askConfirm('Are you sure you want to delete this report?')) return;
         try {
             await api.delete(`/reports/${id}`);
             fetchReports();
@@ -118,16 +135,15 @@ export default function ReportsPage() {
 
     const getTypeInfo = (type: string) => REPORT_TYPES[type] || REPORT_TYPES.lab;
 
-    const filtered = reports.filter(r =>
-        r.title.toLowerCase().includes(search.toLowerCase()) ||
-        r.type?.toLowerCase().includes(search.toLowerCase())
-    );
+    const filtered = reports;
 
     return (
         <div className="flex flex-col min-h-full safe-top">
+            {confirmationDialog}
+            {viewReport && <ReportDetail id={viewReport} onClose={() => setViewReport('')} />}
             <PageHeader
                 title="Reports"
-                subtitle={`${reports.length} total`}
+                subtitle={`${total} total`}
                 icon={FileText}
                 iconBg="bg-violet-100 dark:bg-violet-900/30"
                 iconColor="text-violet-600 dark:text-violet-400"
@@ -139,13 +155,13 @@ export default function ReportsPage() {
             />
 
             <main className="flex-1 w-full">
-                <div className="container-app space-y-4 pb-24 lg:pb-8 max-w-[1600px] animate-fade-in">
+                <div className="container-app space-y-4 pb-24 lg:pb-8 max-w-7xl animate-fade-in">
                     {error && <ErrorBanner message={error} onDismiss={() => setError('')} />}
 
                     <SearchBar value={search} onChange={setSearch} placeholder="Search reports..." />
 
                     {loading ? (
-                        <LoadingSkeleton variant="card" count={6} />
+                        <LoadingSkeleton variant="row" count={5} />
                     ) : filtered.length === 0 ? (
                         <EmptyState
                             icon={FileText}
@@ -158,7 +174,7 @@ export default function ReportsPage() {
                             ) : undefined}
                         />
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="space-y-3">
                             {filtered.map((report, i) => {
                                 const typeInfo = getTypeInfo(report.type);
                                 return (
@@ -195,10 +211,11 @@ export default function ReportsPage() {
                                                 )}
                                             </div>
                                             <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2">
+                                                <button className="text-primary text-sm mr-2" onClick={() => setViewReport(report.id)}>Read / print</button>
                                                 <button onClick={() => handleEdit(report)} className="p-1.5 hover:bg-muted rounded-lg transition-colors" title="Edit">
                                                     <Edit2 size={14} className="text-muted-foreground" />
                                                 </button>
-                                                <button onClick={() => handleDelete(report.id)} className="p-1.5 hover:bg-destructive/10 rounded-lg transition-colors" title="Delete">
+                                                <button disabled={!canDelete} aria-label="Delete report" onClick={() => handleDelete(report.id)} className="p-1.5 hover:bg-destructive/10 rounded-lg transition-colors" title="Delete">
                                                     <Trash2 size={14} className="text-destructive" />
                                                 </button>
                                             </div>
@@ -211,6 +228,7 @@ export default function ReportsPage() {
                 </div>
                 {/* Mobile Bottom Spacer */}
                 <div className="h-[80px] lg:hidden w-full flex-shrink-0" aria-hidden="true" />
+            <div className="container-app"><Pagination page={page} total={total} onChange={setPage} /></div>
             </main>
 
             <Modal
@@ -221,13 +239,14 @@ export default function ReportsPage() {
                 footer={
                     <div className="flex gap-3">
                         <button type="button" onClick={resetForm} className="flex-1 btn-secondary">Cancel</button>
-                        <button type="submit" form="report-form" className="flex-1 btn-primary">
+                        <button type="submit" disabled={saving} form="report-form" className="flex-1 btn-primary">
                             {editingReport ? 'Update' : 'Create'} Report
                         </button>
                     </div>
                 }
             >
                 <form id="report-form" onSubmit={handleSubmit} className="space-y-4">
+                        {error && <ErrorBanner message={error} />}
                     <FormInput label="Title" required value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} />
                     <FormSelect
                         label="Type"

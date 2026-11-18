@@ -1,18 +1,10 @@
 import './globals.css'
 import type { Metadata } from 'next'
-import { Inter, Manrope } from 'next/font/google'
+import localFont from 'next/font/local'
 import { Providers } from '@/components/providers'
 
-const inter = Inter({
-    subsets: ['latin'],
-    variable: '--font-inter',
-})
-
-const manrope = Manrope({
-    subsets: ['latin'],
-    variable: '--font-manrope',
-    weight: ['400', '500', '600', '700', '800'],
-})
+const inter = localFont({ src: '../public/fonts/Inter.ttf', variable: '--font-inter', weight: '100 900', display: 'swap' })
+const manrope = localFont({ src: '../public/fonts/Manrope.ttf', variable: '--font-manrope', weight: '200 800', display: 'swap' })
 
 export const metadata: Metadata = {
     metadataBase: new URL(process.env.NEXTAUTH_URL || 'http://localhost:3000'),
@@ -38,8 +30,6 @@ export const metadata: Metadata = {
 export const viewport = {
     width: 'device-width',
     initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
     viewportFit: 'cover',
 }
 

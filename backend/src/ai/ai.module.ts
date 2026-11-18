@@ -10,6 +10,6 @@ import { AuditModule } from '../audit/audit.module';
     imports: [AuditModule],
     providers: [AiService, AnonymizationService, BioMistralService, MedicalGuidelinesService],
     controllers: [AiController],
-    exports: [AiService],
+    exports: [AiService, BioMistralService],
 })
 export class AiModule {}

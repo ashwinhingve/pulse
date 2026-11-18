@@ -38,6 +38,8 @@ export class DemoService implements OnApplicationBootstrap {
 
     // Auto-seed on startup when the database is empty (first deployment)
     async onApplicationBootstrap(): Promise<void> {
+        // Hosted deployments must explicitly opt in to sample accounts and records.
+        if (process.env.NODE_ENV === 'production' && process.env.SEED_DEMO_DATA !== 'true') return;
         try {
             const userCount = await this.userRepository.count();
             if (userCount === 0) {

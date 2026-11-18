@@ -153,7 +153,7 @@ export class AuthService {
     }
 
     async refreshToken(userId: string): Promise<AuthTokens> {
-        const user = await this.usersService.findOne(userId);
+        const user = await this.usersService.findActive(userId);
         return this.generateTokens(user);
     }
 

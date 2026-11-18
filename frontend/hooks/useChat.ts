@@ -1,5 +1,7 @@
 'use client';
 
+import { getAuthToken, authenticatedFetch } from '@/lib/session';
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuthStore } from '@/lib/store/auth';
@@ -33,31 +35,7 @@ const WS_BASE = API_URL.replace('/api', '');
 const WS_URL = `${WS_BASE}/chat`;
 
 // 4-tier token resolution: Zustand → localStorage(accessToken) → mobile localStorage → NextAuth
-const getToken = async (): Promise<string | null> => {
-    // 1. Zustand store (set by ProtectedLayout after NextAuth session is ready)
-    const storeToken = useAuthStore.getState().accessToken;
-    if (storeToken) return storeToken;
-    // 2. Direct localStorage key — setAuth() always writes here
-    try {
-        if (typeof window !== 'undefined') {
-            const direct = localStorage.getItem('accessToken');
-            if (direct) return direct;
-        }
-    } catch {}
-    // 3. Mobile auth storage (Capacitor)
-    try {
-        const { getStoredSession } = await import('@/lib/mobile-auth');
-        const m = getStoredSession();
-        if (m?.tokens?.accessToken) return m.tokens.accessToken;
-    } catch {}
-    // 4. NextAuth session (always fresh from server)
-    try {
-        const { getSession } = await import('next-auth/react');
-        const s = await getSession();
-        return s?.accessToken || null;
-    } catch {}
-    return null;
-};
+const getToken = getAuthToken;
 
 const getCurrentUserId = (): string | null => {
     const storeUser = useAuthStore.getState().user;
@@ -105,7 +83,7 @@ export function useChat(options: UseChatOptions = {}) {
             if (!token || !mounted) return;
 
             socket = io(WS_URL, {
-                auth: { token },
+                auth: async (callback: (data: { token: string | null }) => void) => callback({ token: await getAuthToken() }),
                 transports: ['websocket', 'polling'],
                 reconnection: true,
                 reconnectionDelay: 1000,
@@ -263,7 +241,7 @@ export function useChat(options: UseChatOptions = {}) {
         if (!token) return;
 
         try {
-            const response = await fetch(`${API_URL}/chat/conversations`, {
+            const response = await authenticatedFetch(`${API_URL}/chat/conversations`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
 
@@ -305,7 +283,7 @@ export function useChat(options: UseChatOptions = {}) {
         setState((prev) => ({ ...prev, messagesLoading: true, error: null }));
 
         try {
-            const response = await fetch(
+            const response = await authenticatedFetch(
                 `${API_URL}/chat/conversations/${conversationId}/messages`,
                 {
                     headers: { Authorization: `Bearer ${token}` },
@@ -335,7 +313,7 @@ export function useChat(options: UseChatOptions = {}) {
         if (!token) return false;
 
         try {
-            const response = await fetch(`${API_URL}/chat/partners`, {
+            const response = await authenticatedFetch(`${API_URL}/chat/partners`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
 
@@ -360,6 +338,7 @@ export function useChat(options: UseChatOptions = {}) {
             recipientId?: string;
             title?: string;
             context?: string;
+            caseId?: string;
         }) => {
             const token = await getToken();
             if (!token) return null;
@@ -367,7 +346,7 @@ export function useChat(options: UseChatOptions = {}) {
             setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
             try {
-                const response = await fetch(`${API_URL}/chat/conversations`, {
+                const response = await authenticatedFetch(`${API_URL}/chat/conversations`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -538,7 +517,7 @@ export function useChat(options: UseChatOptions = {}) {
             formData.append('file', file);
 
             try {
-                const response = await fetch(
+                const response = await authenticatedFetch(
                     `${API_URL}/chat/attachments?conversationId=${conversationId}`,
                     {
                         method: 'POST',

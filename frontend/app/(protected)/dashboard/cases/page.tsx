@@ -6,6 +6,8 @@ import { motion } from 'framer-motion';
 import {
     FileText, Plus, Clock, ChevronRight, Shield, Loader2,
 } from 'lucide-react';
+import { useAuthStore } from '@/lib/store/auth';
+import Pagination from '@/components/ui/Pagination';
 import { api } from '@/lib/api';
 import PageHeader from '@/components/ui/PageHeader';
 import SearchBar from '@/components/ui/SearchBar';
@@ -19,7 +21,7 @@ import Badge from '@/components/ui/Badge';
 
 interface MedicalCase {
     id: string;
-    caseNumber: string;
+    patientCode: string;
     severity: 'routine' | 'urgent' | 'critical';
     status: 'open' | 'in_progress' | 'resolved';
     chiefComplaint: string;
@@ -40,34 +42,34 @@ const STATUS_MAP: Record<string, { variant: 'success' | 'info' | 'default'; labe
 };
 
 export default function CasesPage() {
+    const canCreate = useAuthStore(s => (s.user?.clearanceLevel ?? 0) >= 1);
     const router = useRouter();
     const [cases, setCases] = useState<MedicalCase[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
-    const [searchQuery, setSearchQuery] = useState('');
+    const [searchQuery, setSearchValue] = useState('');
+    const [page, setPage] = useState(1); const [total, setTotal] = useState(0);
+    const setSearchQuery = (value: string) => { setSearchValue(value); setPage(1); };
     const [filterSeverity, setFilterSeverity] = useState<string>('all');
     const [showNewCaseModal, setShowNewCaseModal] = useState(false);
 
     useEffect(() => {
         const fetchCases = async () => {
             try {
-                const { data } = await api.get('/medical/cases');
-                setCases(Array.isArray(data) ? data : data.cases ?? []);
+                setIsLoading(true);
+                const { data } = await api.get('/medical/cases', { params: { page, limit: 20, search: searchQuery, severity: filterSeverity } });
+                setCases(data.items); setTotal(data.total);
             } catch {
                 setError('Failed to load cases. Please try again.');
             } finally {
                 setIsLoading(false);
             }
         };
-        fetchCases();
-    }, []);
+        const timer = setTimeout(fetchCases, 250);
+        return () => clearTimeout(timer);
+    }, [page, searchQuery, filterSeverity]);
 
-    const filteredCases = cases.filter(c => {
-        const matchesSearch = c.chiefComplaint.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            c.caseNumber?.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesSeverity = filterSeverity === 'all' || c.severity === filterSeverity;
-        return matchesSearch && matchesSeverity;
-    });
+    const filteredCases = cases;
 
     const formatDate = (dateStr: string) => {
         return new Date(dateStr).toLocaleDateString('en-US', {
@@ -79,24 +81,24 @@ export default function CasesPage() {
         <div className="flex flex-col min-h-full safe-top">
             <PageHeader
                 title="Medical Cases"
-                subtitle={`${cases.length} total`}
+                subtitle={`${total} total`}
                 icon={FileText}
                 iconBg="bg-blue-100 dark:bg-blue-900/30"
                 iconColor="text-blue-600 dark:text-blue-400"
                 actions={
-                    <button onClick={() => setShowNewCaseModal(true)} className="btn-primary text-sm">
+                    <button disabled={!canCreate} title={!canCreate ? 'Confidential clearance required' : undefined} onClick={() => setShowNewCaseModal(true)} className="btn-primary text-sm">
                         <Plus size={16} /> <span className="hidden sm:inline">New Case</span>
                     </button>
                 }
             />
 
             <main className="flex-1 w-full">
-                <div className="container-app space-y-4 pb-24 lg:pb-8 max-w-[1600px] animate-fade-in">
+                <div className="container-app space-y-4 pb-24 lg:pb-8 max-w-4xl animate-fade-in">
                     {error && <ErrorBanner message={error} onDismiss={() => setError('')} />}
 
                     <div className="flex gap-2">
                         <div className="flex-1">
-                            <SearchBar value={searchQuery} onChange={setSearchQuery} placeholder="Search cases by complaint or case number..." />
+                            <SearchBar value={searchQuery} onChange={setSearchQuery} placeholder="Search cases..." />
                         </div>
                         <select
                             value={filterSeverity}
@@ -111,20 +113,20 @@ export default function CasesPage() {
                     </div>
 
                     {isLoading ? (
-                        <LoadingSkeleton variant="card" count={6} />
+                        <LoadingSkeleton variant="row" count={5} />
                     ) : filteredCases.length === 0 ? (
                         <EmptyState
                             icon={FileText}
                             title="No cases found"
                             description={searchQuery ? 'Try adjusting your search terms' : 'Create a new case to get started'}
                             action={!searchQuery ? (
-                                <button onClick={() => setShowNewCaseModal(true)} className="btn-primary text-sm">
+                                <button disabled={!canCreate} title={!canCreate ? 'Confidential clearance required' : undefined} onClick={() => setShowNewCaseModal(true)} className="btn-primary text-sm">
                                     <Plus size={16} /> New Case
                                 </button>
                             ) : undefined}
                         />
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="space-y-3">
                             {filteredCases.map((c, i) => {
                                 const sevInfo = SEVERITY_MAP[c.severity] || SEVERITY_MAP.routine;
                                 const statInfo = STATUS_MAP[c.status] || STATUS_MAP.open;
@@ -134,7 +136,7 @@ export default function CasesPage() {
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: i * 0.03, duration: 0.3 }}
-                                        onClick={() => router.push(`/dashboard/cases/${c.id}`)}
+                                        onClick={() => router.push(`/dashboard/cases/detail?id=${c.id}`)}
                                         className="w-full glass-card p-5 hover:shadow-glass-lg transition-all duration-300 text-left"
                                     >
                                         <div className="flex items-start justify-between gap-4">
@@ -146,7 +148,7 @@ export default function CasesPage() {
                                                 <p className="font-medium text-foreground truncate">{c.chiefComplaint}</p>
                                                 <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
                                                     <span className="flex items-center gap-1">
-                                                        <FileText size={12} /> {c.caseNumber}
+                                                        <FileText size={12} /> {c.patientCode}
                                                     </span>
                                                     <span className="flex items-center gap-1">
                                                         <Clock size={12} /> {formatDate(c.updatedAt)}
@@ -161,13 +163,15 @@ export default function CasesPage() {
                         </div>
                     )}
                 </div>
+            <div className="container-app"><Pagination page={page} total={total} onChange={setPage} /></div>
             </main>
 
             {showNewCaseModal && (
                 <NewCaseModal
                     onClose={() => setShowNewCaseModal(false)}
                     onSubmit={(newCase) => {
-                        setCases(prev => [newCase, ...prev]);
+                        setCases(prev => [newCase, ...prev].slice(0, 20));
+                        setTotal(value => value + 1);
                         setShowNewCaseModal(false);
                     }}
                 />
@@ -185,6 +189,9 @@ function NewCaseModal({
 }) {
     const [severity, setSeverity] = useState<'routine' | 'urgent' | 'critical'>('routine');
     const [patientCode, setPatientCode] = useState('');
+    const [patientId, setPatientId] = useState('');
+    const [patients, setPatients] = useState<any[]>([]);
+    useEffect(() => { api.get('/patients').then(r => setPatients(r.data)).catch(() => setError('Unable to load patient choices.')); }, []);
     const [chiefComplaint, setChiefComplaint] = useState('');
     const [symptoms, setSymptoms] = useState('');
     const [medicalHistory, setMedicalHistory] = useState('');
@@ -200,6 +207,7 @@ function NewCaseModal({
             const payload: Record<string, any> = {
                 severity, patientCode, chiefComplaint, symptoms,
             };
+            if (patientId) payload.patientId = patientId;
             if (medicalHistory.trim()) payload.medicalHistory = medicalHistory;
 
             const { data } = await api.post('/medical/cases', payload);
@@ -245,7 +253,7 @@ function NewCaseModal({
                 <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-3 flex items-start gap-2">
                     <Shield className="text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" size={16} />
                     <p className="text-xs text-blue-700 dark:text-blue-300">
-                        Patient data is encrypted and anonymized. No identifying information is stored in plain text.
+                        Use a patient code rather than personal identifiers. Case access follows clearance rules; clinical text is not automatically anonymized in storage.
                     </p>
                 </div>
 
@@ -269,6 +277,7 @@ function NewCaseModal({
                     </div>
                 </div>
 
+                <label className="block text-sm">Linked patient (optional)<select className="form-input mt-1" value={patientId} onChange={e => setPatientId(e.target.value)}><option value="">Retain code only</option>{patients.map(p => <option key={p.id} value={p.id}>{p.firstName} {p.lastName}</option>)}</select></label>
                 <FormInput
                     label="Patient Code"
                     required

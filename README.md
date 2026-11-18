@@ -7,6 +7,8 @@ clearance-level gating, AI-powered diagnostics, and offline-capable mobile/deskt
 
 ---
 
+See [Reliable MVP rollout](docs/MVP_IMPROVEMENTS.md) for database migration, AI configuration, and verification instructions. Web commands select web mode explicitly; native builds use the isolated static-export helper.
+
 ## Team Workflow (Read This First)
 
 > **Team Leader:** All contributors must follow this workflow without exception.
@@ -272,7 +274,7 @@ The keystore is at `frontend/android/keystore/pulselogic-release.jks`.
 cd frontend
 copy .env.mobile .env.local
 set MOBILE_BUILD=true
-npx next build
+node scripts/build-native.cjs
 ```
 
 ### Step 5 — Sync to Android
@@ -385,7 +387,7 @@ npx cap add ios
 cd ios/App && pod install
 cd ../..
 cp .env.mobile .env.local
-MOBILE_BUILD=true npx next build
+MOBILE_BUILD=true node scripts/build-native.cjs
 npx cap sync ios
 npx cap open ios
 ```
@@ -449,6 +451,8 @@ git push origin main --tags
 ---
 
 ## Backend Deployment (Railway)
+
+See [Deployment and API Guide](docs/DEPLOYMENT_AND_API.md) for branch selection, migrations, hosted environment variables, and Gemini API examples.
 
 ```bash
 cd backend

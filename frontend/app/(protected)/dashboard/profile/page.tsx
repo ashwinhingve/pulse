@@ -1,4 +1,5 @@
 'use client';
+import { authenticatedFetch, clearClientSession } from '@/lib/session';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -49,7 +50,7 @@ export default function ProfilePage() {
     }, []);
 
     const handleLogout = async () => {
-        clearAuth();
+        clearClientSession();
         if (isMobileBuild()) {
             mobileLogout();
             router.push('/auth/login');

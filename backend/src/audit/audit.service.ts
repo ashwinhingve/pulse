@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { createHash } from 'crypto';
+import { randomUUID } from 'crypto';
+import { auditHash, verifyAuditChain } from './integrity';
 import { AuditLog } from './audit-log.entity';
 
 export interface AuditLogData {
@@ -29,29 +30,24 @@ export class AuditService {
     ) { }
 
     async log(data: AuditLogData): Promise<AuditLog> {
-        // Get previous log for hash chain
-        const previousLogs = await this.auditLogRepository.find({
-            order: { timestamp: 'DESC' },
-            take: 1,
+        return this.auditLogRepository.manager.transaction(async manager => {
+            // Serializes appends across processes, not just this Node instance.
+            await manager.query('SELECT pg_advisory_xact_lock(72419001)');
+            const repository = manager.getRepository(AuditLog);
+            const previous = await repository.findOne({ where: { chainVersion: 2 }, order: { chainSequence: 'DESC' } });
+            const log = repository.create({
+                id: randomUUID(), timestamp: new Date(), chainVersion: 2,
+                chainSequence: (previous?.chainSequence ?? 0) + 1,
+                previousHash: previous?.currentHash ?? '0',
+                action: data.action, userId: data.userId, username: data.username,
+                resource: data.resource, resourceId: data.resourceId, ipAddress: data.ipAddress || 'unknown',
+                userAgent: data.userAgent, deviceId: data.deviceId, success: data.success,
+                errorMessage: data.errorMessage || data.error,
+                metadata: data.metadata,
+            });
+            log.currentHash = auditHash(log);
+            return repository.save(log);
         });
-
-        const previousLog = previousLogs[0];
-        const previousHash = previousLog?.currentHash || '0';
-
-        // Create hash of current log
-        const currentHash = this.createHash({
-            ...data,
-            previousHash,
-            timestamp: new Date(),
-        });
-
-        const auditLog = this.auditLogRepository.create({
-            ...data,
-            previousHash,
-            currentHash,
-        });
-
-        return this.auditLogRepository.save(auditLog);
     }
 
     async findAll(limit: number = 100, offset: number = 0): Promise<AuditLog[]> {
@@ -78,46 +74,7 @@ export class AuditService {
         });
     }
 
-    async verifyIntegrity(): Promise<boolean> {
-        const logs = await this.auditLogRepository.find({
-            order: { timestamp: 'ASC' },
-        });
-
-        for (let i = 1; i < logs.length; i++) {
-            const currentLog = logs[i];
-            const previousLog = logs[i - 1];
-
-            if (currentLog.previousHash !== previousLog.currentHash) {
-                return false;
-            }
-
-            const expectedHash = this.createHash({
-                action: currentLog.action,
-                userId: currentLog.userId,
-                username: currentLog.username,
-                resource: currentLog.resource,
-                resourceId: currentLog.resourceId,
-                ipAddress: currentLog.ipAddress,
-                userAgent: currentLog.userAgent,
-                deviceId: currentLog.deviceId,
-                success: currentLog.success,
-                errorMessage: currentLog.errorMessage,
-                metadata: currentLog.metadata,
-                previousHash: currentLog.previousHash,
-                timestamp: currentLog.timestamp,
-            });
-
-            if (currentLog.currentHash !== expectedHash) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private createHash(data: any): string {
-        const hash = createHash('sha256');
-        hash.update(JSON.stringify(data));
-        return hash.digest('hex');
+    async verifyIntegrity() {
+        return verifyAuditChain(await this.auditLogRepository.find());
     }
 }

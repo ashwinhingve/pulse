@@ -1,5 +1,7 @@
 'use client';
 
+import { clearClientSession } from '@/lib/session';
+
 import { createContext, useContext, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -8,7 +10,7 @@ import {
     MessageSquare, Bot, BookOpen, Shield, LogOut,
     ChevronLeft, ChevronRight, X, Lock,
     Users, Stethoscope, ClipboardList, Menu,
-    HeartPulse, Info, ClipboardCheck,
+    HeartPulse, Info,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import {
@@ -55,6 +57,7 @@ const NAV_ITEMS: NavItem[] = [
     { href: '/dashboard/cases', label: 'Medical Cases', icon: FileText, roles: [UserRole.ARMY_MEDICAL_OFFICER, UserRole.PUBLIC_MEDICAL_OFFICIAL, UserRole.ADMIN], section: 'Clinical' },
     { href: '/dashboard/symptoms', label: 'Symptoms', icon: Thermometer, roles: [UserRole.ARMY_MEDICAL_OFFICER, UserRole.PUBLIC_MEDICAL_OFFICIAL], section: 'Clinical' },
     { href: '/dashboard/patients', label: 'Patients', icon: Users, roles: [UserRole.ARMY_MEDICAL_OFFICER, UserRole.PUBLIC_MEDICAL_OFFICIAL, UserRole.ADMIN], section: 'Clinical' },
+    { href: '/dashboard/documents', label: 'Documents', icon: FileText, roles: [UserRole.ARMY_MEDICAL_OFFICER, UserRole.PUBLIC_MEDICAL_OFFICIAL, UserRole.ADMIN], section: 'Clinical' },
     { href: '/dashboard/doctors', label: 'Doctors', icon: Stethoscope, roles: [UserRole.ARMY_MEDICAL_OFFICER, UserRole.PUBLIC_MEDICAL_OFFICIAL, UserRole.ADMIN], section: 'Clinical' },
     { href: '/dashboard/reports', label: 'Reports', icon: ClipboardList, roles: [UserRole.ARMY_MEDICAL_OFFICER, UserRole.PUBLIC_MEDICAL_OFFICIAL, UserRole.ADMIN], section: 'Clinical' },
     { href: '/dashboard/diagnoses', label: 'Diagnoses', icon: ClipboardList, roles: [UserRole.ARMY_MEDICAL_OFFICER, UserRole.PUBLIC_MEDICAL_OFFICIAL, UserRole.ADMIN], section: 'Clinical' },
@@ -63,7 +66,7 @@ const NAV_ITEMS: NavItem[] = [
     { href: '/dashboard/assistant', label: 'AI Assistant', icon: Bot, roles: [UserRole.ARMY_MEDICAL_OFFICER, UserRole.PUBLIC_MEDICAL_OFFICIAL, UserRole.ADMIN], section: 'Tools' },
     { href: '/dashboard/education', label: 'Medical Library', icon: BookOpen, roles: [UserRole.ARMY_MEDICAL_OFFICER, UserRole.PUBLIC_MEDICAL_OFFICIAL, UserRole.ADMIN], section: 'Tools' },
     { href: '/dashboard/about', label: 'About & Credits', icon: Info, roles: [UserRole.ARMY_MEDICAL_OFFICER, UserRole.PUBLIC_MEDICAL_OFFICIAL, UserRole.ADMIN], section: 'System' },
-    { href: '/dashboard/audit', label: 'Audit Logs', icon: ClipboardCheck, roles: [UserRole.ADMIN], section: 'System' },
+    { href: '/dashboard/audit', label: 'Audit Logs', icon: Shield, roles: [UserRole.ADMIN], section: 'System' },
     { href: '/admin', label: 'Admin Panel', icon: Shield, roles: [UserRole.ADMIN], section: 'System' },
 ];
 
@@ -102,7 +105,7 @@ function SidebarNav({ collapsed = false, mobileMode = false, onClose }: SidebarN
         .slice(0, 2);
 
     const handleLogout = async () => {
-        useAuthStore.getState().clearAuth();
+        clearClientSession();
         if (isMobileBuild()) {
             mobileLogout();
             router.push('/auth/login');
@@ -260,7 +263,7 @@ function SidebarNav({ collapsed = false, mobileMode = false, onClose }: SidebarN
                                 e.preventDefault();
                                 handleLogout();
                             }}
-                            className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all"
+                            className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all "
                             title="Sign out"
                         >
                             <LogOut size={16} />
@@ -268,7 +271,6 @@ function SidebarNav({ collapsed = false, mobileMode = false, onClose }: SidebarN
                     </div>
                 ) : (
                     <div className="flex flex-col items-center gap-2">
-                        <ThemeToggle compact />
                         <div className="h-9 w-9 bg-gradient-to-br from-medical-teal-400 to-medical-blue-500 rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-soft ring-2 ring-primary/10">
                             {initials}
                         </div>

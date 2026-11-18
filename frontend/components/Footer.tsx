@@ -26,7 +26,7 @@ const Footer: React.FC = () => {
                     <div className="flex flex-wrap justify-center gap-4 sm:gap-8 opacity-50 dark:opacity-30">
                         <div className="flex items-center gap-2 border border-border px-3 py-1.5 rounded-full text-foreground">
                             <Shield size={12} />
-                            <span className="text-[9px] font-black uppercase tracking-widest">HIPAA Compliant</span>
+                            <span className="text-[9px] font-black uppercase tracking-widest">Demonstration MVP</span>
                         </div>
                         <div className="flex items-center gap-2 border border-border px-3 py-1.5 rounded-full text-foreground">
                             <Lock size={12} />

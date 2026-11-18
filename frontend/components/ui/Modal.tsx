@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState, useRef, useId } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
@@ -28,6 +28,8 @@ export default function Modal({
     open, onClose, title, subtitle, size = 'md', children, footer, className,
 }: ModalProps) {
     // Avoid rendering portal during SSR
+    const panelRef = useRef<HTMLDivElement>(null);
+    const titleId = useId();
     const [mounted, setMounted] = useState(false);
 
     const handleEsc = useCallback((e: KeyboardEvent) => {
@@ -41,13 +43,32 @@ export default function Modal({
     useEffect(() => {
         if (open) {
             document.addEventListener('keydown', handleEsc);
+            const previous = document.activeElement as HTMLElement | null;
+            const previousOverflow = document.body.style.overflow;
             document.body.style.overflow = 'hidden';
+            const frame = requestAnimationFrame(() => panelRef.current?.focus());
+            const trap = (event: KeyboardEvent) => {
+                if (event.key !== 'Tab') return;
+                const elements = Array.from(panelRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]') || [])
+                    .filter(element => element.getClientRects().length > 0);
+                const first = elements[0], last = elements[elements.length - 1];
+                if (!first) { event.preventDefault(); panelRef.current?.focus(); }
+                else if (event.shiftKey && (document.activeElement === first || document.activeElement === panelRef.current)) { event.preventDefault(); last.focus(); }
+                else if (!event.shiftKey && (document.activeElement === last || document.activeElement === panelRef.current)) { event.preventDefault(); first.focus(); }
+            };
+            document.addEventListener('keydown', trap);
+            return () => {
+                cancelAnimationFrame(frame); document.removeEventListener('keydown', trap);
+                document.removeEventListener('keydown', handleEsc);
+                document.body.style.overflow = previousOverflow;
+                previous?.focus();
+            };
         }
         return () => {
             document.removeEventListener('keydown', handleEsc);
             document.body.style.overflow = '';
         };
-    }, [open, handleEsc]);
+    }, [open, handleEsc, mounted]);
 
     if (!mounted) return null;
 
@@ -74,6 +95,7 @@ export default function Modal({
 
                     {/* Panel */}
                     <motion.div
+                        ref={panelRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby={titleId}
                         initial={{ opacity: 0, y: 40, scale: 0.97 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 20, scale: 0.97 }}
@@ -87,7 +109,7 @@ export default function Modal({
                         {/* Header */}
                         <div className="flex items-center justify-between px-5 sm:px-6 py-4 border-b border-border/50 flex-shrink-0">
                             <div>
-                                <h2 className="text-base font-semibold text-foreground">{title}</h2>
+                                <h2 id={titleId} className="text-base font-semibold text-foreground">{title}</h2>
                                 {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
                             </div>
                             <button

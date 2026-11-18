@@ -142,6 +142,12 @@ export default function ChatPage() {
         [selectConversation, markAsRead]
     );
 
+    useEffect(() => {
+        const id = new URLSearchParams(window.location.search).get('conversationId');
+        const conversation = conversations.find(item => item.id === id);
+        if (conversation && currentConversation?.id !== id) handleSelectConversation(conversation);
+    }, [conversations, currentConversation?.id, handleSelectConversation]);
+
     const handleOpenNewChat = useCallback(async () => {
         setSearchTerm('');
         setShowNewChat(true);
@@ -239,10 +245,10 @@ export default function ChatPage() {
     );
 
     return (
-        <div className="h-[calc(100vh-4rem)] lg:h-screen bg-background flex flex-col overflow-hidden pb-16 lg:pb-0">
+        <div className="min-h-screen bg-background flex flex-col">
             {/* Header */}
-            <header className="glass border-b border-border sticky top-0 z-30 flex-shrink-0">
-                <div className="max-w-[1600px] mx-auto px-4 h-16 flex items-center gap-4">
+            <header className="glass border-b border-border sticky top-0 z-30">
+                <div className="max-w-6xl mx-auto px-4 h-16 flex items-center gap-4">
                     <button
                         onClick={() => currentConversation ? selectConversation(null) : router.back()}
                         className="p-2 hover:bg-muted rounded-full"
@@ -276,7 +282,7 @@ export default function ChatPage() {
                     <div className="flex items-center gap-2">
                         <div className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded-full">
                             <Lock size={12} />
-                            <span className="hidden sm:inline">E2E Encrypted</span>
+                            <span className="hidden sm:inline">Member Access</span>
                         </div>
                         <button
                             onClick={handleOpenNewChat}
@@ -290,13 +296,13 @@ export default function ChatPage() {
 
             {/* Connection status banner */}
             {!isConnected && (
-                <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2 flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400 flex-shrink-0">
+                <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2 flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400">
                     <Loader2 size={12} className="animate-spin" />
                     Reconnecting to secure channel...
                 </div>
             )}
 
-            <main className="flex-1 max-w-[1600px] w-full mx-auto flex overflow-hidden">
+            <main className="flex-1 max-w-6xl w-full mx-auto flex overflow-hidden">
                 {/* Conversation List */}
                 <div className={`w-full md:w-80 bg-card border-r border-border flex-shrink-0 overflow-y-auto ${currentConversation ? 'hidden md:block' : ''}`}>
                     {isLoading ? (
@@ -577,7 +583,7 @@ export default function ChatPage() {
                                 </button>
                             </div>
                             <p className="text-[10px] text-muted-foreground mt-2 text-center">
-                                Messages are end-to-end encrypted
+                                Messages are shared within this authenticated conversation
                             </p>
                         </div>
                     </div>

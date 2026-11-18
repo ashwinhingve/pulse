@@ -1,6 +1,6 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { CreateMedicalCaseDto } from './create-medical-case.dto';
-import { IsEnum, IsOptional } from 'class-validator';
+import { IsEnum, IsOptional, IsUUID } from 'class-validator';
 import { CaseStatus } from '../entities/medical-case.entity';
 
 export class UpdateMedicalCaseDto extends PartialType(CreateMedicalCaseDto) {
@@ -9,5 +9,6 @@ export class UpdateMedicalCaseDto extends PartialType(CreateMedicalCaseDto) {
     status?: CaseStatus;
 
     @IsOptional()
-    assignedTo?: string;
+    @IsUUID()
+    assignedTo?: string | null;
 }

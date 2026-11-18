@@ -3,6 +3,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { SessionProvider } from 'next-auth/react'
 import { ThemeProvider } from 'next-themes'
+import ConnectionBanner from '@/components/ConnectionBanner';
 import { useState } from 'react'
 
 // Check if mobile/desktop static build at module level
@@ -24,6 +25,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     const content = (
         <QueryClientProvider client={queryClient}>
             <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+                <ConnectionBanner />
                 {children}
             </ThemeProvider>
         </QueryClientProvider>

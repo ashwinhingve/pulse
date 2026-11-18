@@ -1,11 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useConfirm } from '@/hooks/useConfirm';
+
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
     ClipboardList, Plus, Edit2, Trash2,
     User, Stethoscope, Calendar,
 } from 'lucide-react';
+import Pagination from '@/components/ui/Pagination';
+import { useAuthStore, UserRole } from '@/lib/store/auth';
 import { api } from '@/lib/api';
 import type { Diagnosis, Patient, Doctor } from '@/types';
 import PageHeader from '@/components/ui/PageHeader';
@@ -26,14 +30,19 @@ const STATUS_MAP: Record<string, { label: string; variant: 'warning' | 'success'
 };
 
 export default function DiagnosesPage() {
+    const { askConfirm, confirmationDialog } = useConfirm();
+    const canDelete = useAuthStore(s => s.user?.role !== UserRole.PUBLIC_MEDICAL_OFFICIAL);
     const [diagnoses, setDiagnoses] = useState<Diagnosis[]>([]);
     const [patients, setPatients] = useState<Patient[]>([]);
     const [doctors, setDoctors] = useState<Doctor[]>([]);
     const [loading, setLoading] = useState(true);
-    const [search, setSearch] = useState('');
+    const [search, setSearchValue] = useState('');
+    const [page, setPage] = useState(1); const [total, setTotal] = useState(0);
+    const setSearch = (value: string) => { setSearchValue(value); setPage(1); };
     const [showForm, setShowForm] = useState(false);
     const [editingDiagnosis, setEditingDiagnosis] = useState<Diagnosis | null>(null);
     const [error, setError] = useState('');
+    const [saving, setSaving] = useState(false);
 
     const [form, setForm] = useState({
         diseaseName: '', description: '', icdCode: '', status: 'preliminary',
@@ -41,29 +50,33 @@ export default function DiagnosesPage() {
     });
 
     useEffect(() => {
-        fetchDiagnoses();
         fetchPatients();
         fetchDoctors();
     }, []);
 
-    const fetchDiagnoses = async () => {
+
+
+    const fetchDiagnoses = useCallback(async () => {
         try {
             setLoading(true);
-            const res = await api.get('/diagnoses');
-            setDiagnoses(res.data);
+            const res = await api.get('/diagnoses', { params: { page, limit: 20, search } });
+            setDiagnoses(res.data.items); setTotal(res.data.total);
+            if (res.data.total > 0 && page > Math.ceil(res.data.total / 20)) setPage(Math.ceil(res.data.total / 20));
         } catch (err: any) {
             setError(err.response?.data?.message || 'Failed to load diagnoses');
         } finally {
             setLoading(false);
         }
-    };
+    }, [page, search]);
+
+    useEffect(() => { const timer = setTimeout(fetchDiagnoses, 250); return () => clearTimeout(timer); }, [fetchDiagnoses]);
 
     const fetchPatients = async () => {
-        try { const res = await api.get('/patients'); setPatients(res.data); } catch {}
+        try { const res = await api.get('/patients'); setPatients(res.data); } catch { setError('Patient choices unavailable. Retry before saving.'); }
     };
 
     const fetchDoctors = async () => {
-        try { const res = await api.get('/doctors'); setDoctors(res.data); } catch {}
+        try { const res = await api.get('/doctors'); setDoctors(res.data); } catch { setError('Doctor choices unavailable. Retry before saving.'); }
     };
 
     const resetForm = () => {
@@ -89,6 +102,8 @@ export default function DiagnosesPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (saving) return;
+        setSaving(true); setError('');
         try {
             const payload = { ...form };
             if (!payload.diagnosedAt) delete (payload as any).diagnosedAt;
@@ -103,11 +118,11 @@ export default function DiagnosesPage() {
             fetchDiagnoses();
         } catch (err: any) {
             setError(err.response?.data?.message || 'Failed to save diagnosis');
-        }
+        } finally { setSaving(false); }
     };
 
     const handleDelete = async (id: string) => {
-        if (!confirm('Are you sure you want to delete this diagnosis?')) return;
+        if (!await askConfirm('Are you sure you want to delete this diagnosis?')) return;
         try {
             await api.delete(`/diagnoses/${id}`);
             fetchDiagnoses();
@@ -116,17 +131,14 @@ export default function DiagnosesPage() {
         }
     };
 
-    const filtered = diagnoses.filter(d =>
-        d.diseaseName.toLowerCase().includes(search.toLowerCase()) ||
-        d.icdCode?.toLowerCase().includes(search.toLowerCase()) ||
-        d.status?.toLowerCase().includes(search.toLowerCase())
-    );
+    const filtered = diagnoses;
 
     return (
         <div className="flex flex-col min-h-full safe-top">
+            {confirmationDialog}
             <PageHeader
                 title="Diagnoses"
-                subtitle={`${diagnoses.length} total`}
+                subtitle={`${total} total`}
                 icon={ClipboardList}
                 iconBg="bg-rose-100 dark:bg-rose-900/30"
                 iconColor="text-rose-600 dark:text-rose-400"
@@ -138,13 +150,13 @@ export default function DiagnosesPage() {
             />
 
             <main className="flex-1 w-full">
-                <div className="container-app space-y-4 pb-24 lg:pb-8 max-w-[1600px] animate-fade-in">
+                <div className="container-app space-y-4 pb-24 lg:pb-8 max-w-7xl animate-fade-in">
                     {error && <ErrorBanner message={error} onDismiss={() => setError('')} />}
 
                     <SearchBar value={search} onChange={setSearch} placeholder="Search by disease, ICD code, or status..." />
 
                     {loading ? (
-                        <LoadingSkeleton variant="card" count={6} />
+                        <LoadingSkeleton variant="row" count={5} />
                     ) : filtered.length === 0 ? (
                         <EmptyState
                             icon={ClipboardList}
@@ -157,7 +169,7 @@ export default function DiagnosesPage() {
                             ) : undefined}
                         />
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="space-y-3">
                             {filtered.map((diagnosis, i) => {
                                 const statusInfo = STATUS_MAP[diagnosis.status] || STATUS_MAP.preliminary;
                                 return (
@@ -213,6 +225,7 @@ export default function DiagnosesPage() {
                         </div>
                     )}
                 </div>
+            <div className="container-app"><Pagination page={page} total={total} onChange={setPage} /></div>
             </main>
 
             <Modal
@@ -223,13 +236,14 @@ export default function DiagnosesPage() {
                 footer={
                     <div className="flex gap-3">
                         <button type="button" onClick={resetForm} className="flex-1 btn-secondary">Cancel</button>
-                        <button type="submit" form="diagnosis-form" className="flex-1 btn-primary">
+                        <button type="submit" disabled={saving} form="diagnosis-form" className="flex-1 btn-primary">
                             {editingDiagnosis ? 'Update' : 'Create'} Diagnosis
                         </button>
                     </div>
                 }
             >
                 <form id="diagnosis-form" onSubmit={handleSubmit} className="space-y-4">
+                        {error && <ErrorBanner message={error} />}
                     <FormInput label="Disease Name" required value={form.diseaseName} onChange={e => setForm({ ...form, diseaseName: e.target.value })} />
                     <div className="grid grid-cols-2 gap-3">
                         <FormInput label="ICD Code" value={form.icdCode} onChange={e => setForm({ ...form, icdCode: e.target.value })} placeholder="e.g. J18.9" />

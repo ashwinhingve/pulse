@@ -7,6 +7,7 @@ const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
 
 const nextConfig = {
     reactStrictMode: true,
+    distDir: process.env.NEXT_BUILD_DIR || '.next',
     swcMinify: true,
     images: {
         unoptimized: true,
@@ -17,16 +18,14 @@ const nextConfig = {
         output: 'export',
     }),
 
-    // Exclude API routes from mobile builds (static export can't have API routes)
-    ...(isMobileBuild && {
-        excludeDefaultMomentLocales: true,
-    }),
+    // scripts/build-native.cjs excludes server-only auth routes in an isolated build.
 
     // Proxy API requests to backend — only for web dev (not static export)
     ...(!isMobileBuild && {
         async rewrites() {
             return {
                 beforeFiles: [
+                    { source: '/health', destination: `${BACKEND_URL}/health` },
                     {
                         source: '/api/:path((?!auth/).*)',
                         destination: `${BACKEND_URL}/api/:path*`,
@@ -77,6 +76,7 @@ const nextConfig = {
 
     // Environment variables exposed to client
     env: {
+        NEXT_PUBLIC_MOBILE_BUILD: isMobileBuild ? 'true' : 'false',
         NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
         NEXT_PUBLIC_WS_URL: process.env.NEXT_PUBLIC_WS_URL,
     }

@@ -21,7 +21,7 @@ export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
     // Allow public routes, root (landing), and static files
-    if (pathname === '/' || publicRoutes.some(route => pathname.startsWith(route))) {
+    if (pathname === '/' || pathname === '/health' || publicRoutes.some(route => pathname.startsWith(route))) {
         return NextResponse.next();
     }
 

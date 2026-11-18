@@ -1,5 +1,7 @@
 'use client';
 
+import { authenticatedFetch } from '@/lib/session';
+
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
@@ -129,7 +131,7 @@ export default function AssistantPage() {
 
         try {
             const callApi = async (token: string) =>
-                fetch(`${API_URL}/ai/query-protocol`, {
+                authenticatedFetch(`${API_URL}/ai/query-protocol`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                     body: JSON.stringify({ query: messageText }),
@@ -151,7 +153,7 @@ export default function AssistantPage() {
 
             if (response.ok) {
                 const data = await response.json();
-                assistantContent = data.protocol;
+                assistantContent = `${data.source === 'guidelines-fallback' ? 'Guideline fallback · AI model unavailable' : `AI model: ${data.model || 'configured provider'}`}\n\n${data.protocol}\n\n${data.disclaimer || ''}`;
                 if (data.guidelines?.length > 0) guidelines = data.guidelines;
                 if (data.references?.length > 0) assistantContent += `\n\n**References:** ${data.references.join(', ')}`;
                 assistantContent += `\n\n*${data.disclaimer}*`;
@@ -159,7 +161,7 @@ export default function AssistantPage() {
                 assistantContent = '**Authentication failed.** Your session has expired.\n\nPlease **log out and log back in** to continue.';
             } else {
                 try {
-                    const gRes = await fetch(`${API_URL}/ai/guidelines/search?q=${encodeURIComponent(messageText)}`, {
+                    const gRes = await authenticatedFetch(`${API_URL}/ai/guidelines/search?q=${encodeURIComponent(messageText)}`, {
                         headers: { 'Authorization': `Bearer ${authToken}` },
                     });
                     if (gRes.ok) {
@@ -197,7 +199,7 @@ export default function AssistantPage() {
     };
 
     const generateFallbackResponse = (query: string): string =>
-        `I'm currently unable to connect to the medical AI model.\n\n**Your query:** "${query.slice(0, 100)}..."\n\nPlease try:\n1. Check that the backend is running\n2. Verify the HuggingFace API key is configured\n3. Try again in 30 seconds (cold start)\n\n*The model may be loading.*`;
+        `I'm currently unable to connect to the medical AI model.\n\n**Your query:** "${query.slice(0, 100)}..."\n\nPlease try:\n1. Check that the backend is running\n2. Ask an administrator to check the AI provider\n3. Try again in 30 seconds (cold start)\n\n*The model may be loading.*`;
 
     const handleReset = () => {
         setMessages([]);
@@ -207,7 +209,7 @@ export default function AssistantPage() {
     const handleViewGuideline = async (id: string) => {
         try {
             const authToken = await getToken();
-            const res = await fetch(`${API_URL}/ai/guidelines/${id}`, {
+            const res = await authenticatedFetch(`${API_URL}/ai/guidelines/${id}`, {
                 headers: { 'Authorization': `Bearer ${authToken}` },
             });
             if (res.ok) {
@@ -266,11 +268,11 @@ export default function AssistantPage() {
                             <h1 className="text-base font-bold text-foreground flex items-center gap-2 leading-tight">
                                 Medical AI
                                 <span className="text-[10px] font-semibold px-2 py-0.5 bg-gradient-to-r from-violet-100 to-fuchsia-100 dark:from-violet-900/40 dark:to-fuchsia-900/40 text-violet-700 dark:text-violet-300 rounded-full flex items-center gap-1">
-                                    <Sparkles size={9} /> BioMistral
+                                    <Sparkles size={9} /> Clinical AI
                                 </span>
                             </h1>
                             <p className="text-[11px] text-muted-foreground truncate">
-                                AIIMS Guidelines · Evidence-Based · Encrypted
+                                AIIMS Guidelines · Decision Support
                             </p>
                         </div>
                     </div>
@@ -281,7 +283,7 @@ export default function AssistantPage() {
                             </button>
                         )}
                         <div className="hidden sm:flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded-full font-medium">
-                            <ShieldCheck size={11} /> E2E Encrypted
+                            <ShieldCheck size={11} /> Review Required
                         </div>
                     </div>
                 </div>
@@ -398,7 +400,7 @@ export default function AssistantPage() {
                                             <div className={`flex items-center gap-2 ${message.role === 'user' ? 'justify-end' : ''}`}>
                                                 {message.role === 'assistant' && message.isAnonymized && (
                                                     <span className="flex items-center gap-0.5 text-[10px] text-violet-500/70">
-                                                        <ShieldCheck size={9} /> Encrypted
+                                                        <ShieldCheck size={9} /> Review Required
                                                     </span>
                                                 )}
                                                 <span className="text-[10px] text-muted-foreground/60">{formatTime(message.timestamp)}</span>
@@ -458,11 +460,11 @@ export default function AssistantPage() {
                         </button>
                     </div>
                     <div className="flex items-center justify-center gap-3 mt-2.5 text-[10px] text-muted-foreground/50">
-                        <span className="flex items-center gap-1"><Brain size={10} /> BioMistral AI</span>
+                        <span className="flex items-center gap-1"><Brain size={10} /> Clinical AI</span>
                         <span>·</span>
                         <span className="flex items-center gap-1"><BookOpen size={10} /> AIIMS Guidelines</span>
                         <span>·</span>
-                        <span className="flex items-center gap-1"><Lock size={10} /> End-to-End Encrypted</span>
+                        <span className="flex items-center gap-1"><Lock size={10} /> Clinician Review Required</span>
                     </div>
                 </div>
             </main>

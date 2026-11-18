@@ -45,3 +45,8 @@ src-tauri/target/
 .idea/
 *.swp
 
+
+# Isolated local verification/native output
+.next-native/
+.next-preview/
+.native-api-backup/

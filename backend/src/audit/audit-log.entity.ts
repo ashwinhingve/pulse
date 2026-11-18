@@ -55,4 +55,10 @@ export class AuditLog {
 
     @Column()
     currentHash: string;
+
+    @Column({ type: 'int', default: 1 })
+    chainVersion: number;
+
+    @Column({ type: 'int', nullable: true, unique: true })
+    chainSequence: number;
 }

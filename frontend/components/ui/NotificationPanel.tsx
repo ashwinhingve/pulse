@@ -92,7 +92,7 @@ export function NotificationBell() {
     return (
         <div className="relative">
             <button
-                id="notification-bell-btn"
+                id="notification-bell-btn" aria-expanded={open}
                 onClick={() => setOpen(!open)}
                 className="relative p-2 rounded-xl hover:bg-muted transition-colors"
                 aria-label="Notifications"

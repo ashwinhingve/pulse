@@ -30,6 +30,10 @@ export class MedicalCase {
     @Index()
     patientCode: string; // e.g., "P-2024-001234"
 
+    @Column({ type: 'uuid', nullable: true })
+    @Index()
+    patientId: string | null;
+
     // Medical officer who created the case
     @Column()
     @Index()

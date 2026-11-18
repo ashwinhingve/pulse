@@ -1,8 +1,9 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useSidebar } from '@/components/layouts/AppShell';
 import type { LucideIcon } from 'lucide-react';
 
 interface PageHeaderProps {
@@ -20,11 +21,13 @@ export default function PageHeader({
     title, subtitle, icon: Icon, iconColor, iconBg, backHref = '/dashboard', actions, className,
 }: PageHeaderProps) {
     const router = useRouter();
+    const { openMobile } = useSidebar();
 
     return (
-        <header className={cn('relative lg:sticky lg:top-0 z-30 h-16 flex-shrink-0 border-b border-border/40 bg-card/80 backdrop-blur-xl', className)}>
-            <div className="h-full px-4 lg:px-6 flex items-center justify-between max-w-7xl mx-auto">
-                <div className="flex items-center gap-3">
+        <header className={cn('relative lg:sticky lg:top-0 z-30 min-h-16 flex-shrink-0 border-b border-border/40 bg-card/80 backdrop-blur-xl', className)}>
+            <div className="min-h-16 py-3 gap-3 px-4 lg:px-6 flex items-center justify-between max-w-7xl mx-auto">
+                <div className="flex items-center gap-3 min-w-0">
+                    <button onClick={openMobile} className="p-2 lg:hidden touch-target" aria-label="Open navigation"><Menu size={20} /></button>
                     <button
                         onClick={() => router.push(backHref)}
                         className="p-2 hover:bg-muted/50 rounded-xl lg:hidden touch-target transition-colors"

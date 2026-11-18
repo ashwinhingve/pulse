@@ -1,11 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useConfirm } from '@/hooks/useConfirm';
+
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
     Stethoscope, Plus, Edit2, Trash2,
     Phone, Mail, Award, Check,
 } from 'lucide-react';
+import Pagination from '@/components/ui/Pagination';
+import { useAuthStore, UserRole } from '@/lib/store/auth';
 import { api } from '@/lib/api';
 import type { Doctor } from '@/types';
 import PageHeader from '@/components/ui/PageHeader';
@@ -18,12 +22,17 @@ import LoadingSkeleton from '@/components/ui/LoadingSkeleton';
 import Badge from '@/components/ui/Badge';
 
 export default function DoctorsPage() {
+    const { askConfirm, confirmationDialog } = useConfirm();
+    const canManage = useAuthStore(s => s.user?.role === UserRole.ADMIN);
     const [doctors, setDoctors] = useState<Doctor[]>([]);
     const [loading, setLoading] = useState(true);
-    const [search, setSearch] = useState('');
+    const [search, setSearchValue] = useState('');
+    const [page, setPage] = useState(1); const [total, setTotal] = useState(0);
+    const setSearch = (value: string) => { setSearchValue(value); setPage(1); };
     const [showForm, setShowForm] = useState(false);
     const [editingDoctor, setEditingDoctor] = useState<Doctor | null>(null);
     const [error, setError] = useState('');
+    const [saving, setSaving] = useState(false);
 
     const [form, setForm] = useState({
         firstName: '', lastName: '', specialization: '', licenseNumber: '',
@@ -31,19 +40,24 @@ export default function DoctorsPage() {
         experienceYears: 0, isAvailable: true,
     });
 
-    useEffect(() => { fetchDoctors(); }, []);
 
-    const fetchDoctors = async () => {
+
+
+
+    const fetchDoctors = useCallback(async () => {
         try {
             setLoading(true);
-            const res = await api.get('/doctors');
-            setDoctors(res.data);
+            const res = await api.get('/doctors', { params: { page, limit: 20, search } });
+            setDoctors(res.data.items); setTotal(res.data.total);
+            if (res.data.total > 0 && page > Math.ceil(res.data.total / 20)) setPage(Math.ceil(res.data.total / 20));
         } catch (err: any) {
             setError(err.response?.data?.message || 'Failed to load doctors');
         } finally {
             setLoading(false);
         }
-    };
+    }, [page, search]);
+
+    useEffect(() => { const timer = setTimeout(fetchDoctors, 250); return () => clearTimeout(timer); }, [fetchDoctors]);
 
     const resetForm = () => {
         setForm({
@@ -74,6 +88,8 @@ export default function DoctorsPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (saving) return;
+        setSaving(true); setError('');
         try {
             if (editingDoctor) {
                 await api.patch(`/doctors/${editingDoctor.id}`, form);
@@ -84,11 +100,11 @@ export default function DoctorsPage() {
             fetchDoctors();
         } catch (err: any) {
             setError(err.response?.data?.message || 'Failed to save doctor');
-        }
+        } finally { setSaving(false); }
     };
 
     const handleDelete = async (id: string) => {
-        if (!confirm('Are you sure you want to delete this doctor?')) return;
+        if (!await askConfirm('Are you sure you want to delete this doctor?')) return;
         try {
             await api.delete(`/doctors/${id}`);
             fetchDoctors();
@@ -97,48 +113,45 @@ export default function DoctorsPage() {
         }
     };
 
-    const filtered = doctors.filter(d =>
-        `${d.firstName} ${d.lastName}`.toLowerCase().includes(search.toLowerCase()) ||
-        d.specialization?.toLowerCase().includes(search.toLowerCase()) ||
-        d.department?.toLowerCase().includes(search.toLowerCase())
-    );
+    const filtered = doctors;
 
     return (
         <div className="flex flex-col min-h-full safe-top">
+            {confirmationDialog}
             <PageHeader
                 title="Doctors"
-                subtitle={`${doctors.length} registered`}
+                subtitle={`${total} registered`}
                 icon={Stethoscope}
                 iconBg="bg-emerald-100 dark:bg-emerald-900/30"
                 iconColor="text-emerald-600 dark:text-emerald-400"
                 actions={
-                    <button onClick={() => { resetForm(); setShowForm(true); }} className="btn-primary text-sm">
+                    <button disabled={!canManage} title={!canManage ? 'Administrator access required' : undefined} onClick={() => { resetForm(); setShowForm(true); }} className="btn-primary text-sm">
                         <Plus size={16} /> Add Doctor
                     </button>
                 }
             />
 
             <main className="flex-1 w-full">
-                <div className="container-app space-y-4 pb-24 lg:pb-8 max-w-[1600px] animate-fade-in">
+                <div className="container-app space-y-4 pb-24 lg:pb-8 max-w-7xl animate-fade-in">
                     {error && <ErrorBanner message={error} onDismiss={() => setError('')} />}
 
                     <SearchBar value={search} onChange={setSearch} placeholder="Search by name, specialization, or department..." />
 
                     {loading ? (
-                        <LoadingSkeleton variant="card" count={8} />
+                        <LoadingSkeleton variant="card" count={6} />
                     ) : filtered.length === 0 ? (
                         <EmptyState
                             icon={Stethoscope}
                             title="No doctors found"
                             description={search ? 'Try adjusting your search terms' : 'Add your first doctor to get started'}
                             action={!search ? (
-                                <button onClick={() => { resetForm(); setShowForm(true); }} className="btn-primary text-sm">
+                                <button disabled={!canManage} title={!canManage ? 'Administrator access required' : undefined} onClick={() => { resetForm(); setShowForm(true); }} className="btn-primary text-sm">
                                     <Plus size={16} /> Add Doctor
                                 </button>
                             ) : undefined}
                         />
                     ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {filtered.map((doctor, i) => (
                                 <motion.div
                                     key={doctor.id}
@@ -158,10 +171,10 @@ export default function DoctorsPage() {
                                             </div>
                                         </div>
                                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button onClick={() => handleEdit(doctor)} className="p-1.5 hover:bg-muted rounded-lg transition-colors" title="Edit">
+                                            <button disabled={!canManage} onClick={() => handleEdit(doctor)} className="p-1.5 hover:bg-muted rounded-lg transition-colors" title="Edit">
                                                 <Edit2 size={14} className="text-muted-foreground" />
                                             </button>
-                                            <button onClick={() => handleDelete(doctor.id)} className="p-1.5 hover:bg-destructive/10 rounded-lg transition-colors" title="Delete">
+                                            <button disabled={!canManage} onClick={() => handleDelete(doctor.id)} className="p-1.5 hover:bg-destructive/10 rounded-lg transition-colors" title="Delete">
                                                 <Trash2 size={14} className="text-destructive" />
                                             </button>
                                         </div>
@@ -182,6 +195,7 @@ export default function DoctorsPage() {
                         </div>
                     )}
                 </div>
+            <div className="container-app"><Pagination page={page} total={total} onChange={setPage} /></div>
             </main>
 
             <Modal
@@ -192,13 +206,14 @@ export default function DoctorsPage() {
                 footer={
                     <div className="flex gap-3">
                         <button type="button" onClick={resetForm} className="flex-1 btn-secondary">Cancel</button>
-                        <button type="submit" form="doctor-form" className="flex-1 btn-primary">
+                        <button type="submit" disabled={saving} form="doctor-form" className="flex-1 btn-primary">
                             {editingDoctor ? 'Update' : 'Create'} Doctor
                         </button>
                     </div>
                 }
             >
                 <form id="doctor-form" onSubmit={handleSubmit} className="space-y-4">
+                        {error && <ErrorBanner message={error} />}
                     <div className="grid grid-cols-2 gap-3">
                         <FormInput label="First Name" required value={form.firstName} onChange={e => setForm({ ...form, firstName: e.target.value })} />
                         <FormInput label="Last Name" required value={form.lastName} onChange={e => setForm({ ...form, lastName: e.target.value })} />

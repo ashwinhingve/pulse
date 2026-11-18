@@ -1,4 +1,5 @@
 'use client';
+import { authenticatedFetch } from '@/lib/session';
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';

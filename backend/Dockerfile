@@ -32,4 +32,4 @@ COPY --from=builder /app/dist ./dist
 EXPOSE 3001
 
 # Start the app
-CMD ["node", "dist/main.js"]
+CMD ["npm", "run", "start:prod"]

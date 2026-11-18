@@ -20,6 +20,7 @@ function LoginForm() {
 
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [mfaCode, setMfaCode] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
@@ -35,18 +36,19 @@ function LoginForm() {
 
         try {
             if (isMobile) {
-                await mobileLogin(username, password);
+                await mobileLogin(username, password, mfaCode);
                 router.push('/dashboard');
             } else {
                 const result = await signIn('credentials', {
                     username,
                     password,
+                    mfaCode,
                     redirect: false,
                 });
 
                 if (result?.error) {
                     if (result.error === 'ACCOUNT_PENDING') {
-                        setError('Your account is pending administrator approval. You will be notified once it is activated.');
+                        setError('Your account is pending administrator approval. Check back after administrator approval.');
                     } else if (result.error === 'ACCOUNT_SUSPENDED') {
                         setError('Your account has been suspended. Please contact the system administrator.');
                     } else {
@@ -59,7 +61,7 @@ function LoginForm() {
             }
         } catch (err: any) {
             if (err.message === 'ACCOUNT_PENDING') {
-                setError('Your account is pending administrator approval. You will be notified once it is activated.');
+                setError('Your account is pending administrator approval. Check back after administrator approval.');
             } else if (err.message === 'ACCOUNT_SUSPENDED') {
                 setError('Your account has been suspended. Please contact the system administrator.');
             } else {
@@ -157,7 +159,13 @@ function LoginForm() {
 
                 {/* Submit */}
                 <div className="pt-2 animate-fade-in" style={{ animationDelay: '300ms', animationFillMode: 'backwards' }}>
-                    <button
+                    <label className="block text-sm text-slate-300">
+                    Authenticator code (if enabled)
+                    <input value={mfaCode} onChange={e => setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6}
+                        className="mt-2 w-full rounded-xl border border-slate-600 bg-slate-900 p-3 text-white" />
+                </label>
+                <button
                         type="submit"
                         disabled={loading || !username || !password}
                         className="group w-full relative overflow-hidden bg-gradient-to-r from-primary to-accent disabled:from-slate-700 disabled:to-slate-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 flex items-center justify-center gap-2.5 active:scale-[0.98] min-h-[56px] disabled:opacity-60 disabled:cursor-not-allowed"
