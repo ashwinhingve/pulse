@@ -1,3 +1,4 @@
+import { databaseOptions } from './database-options';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -31,34 +32,10 @@ import { AuditInterceptor } from './audit/interceptors/audit.interceptor';
         // Database - supports both DATABASE_URL (Railway) and individual vars
         TypeOrmModule.forRootAsync({
             imports: [ConfigModule],
-            useFactory: (configService: ConfigService) => {
-                const databaseUrl = configService.get('DATABASE_URL');
-
-                if (databaseUrl) {
-                    // Railway provides DATABASE_URL
-                    return {
-                        type: 'postgres',
-                        url: databaseUrl,
-                        entities: [__dirname + '/**/*.entity{.ts,.js}'],
-                        synchronize: true,
-                        ssl: { rejectUnauthorized: false },
-                    };
-                }
-
-                // Local development with individual vars
-                return {
-                    type: 'postgres',
-                    host: configService.get('DB_HOST'),
-                    port: configService.get('DB_PORT'),
-                    username: configService.get('DB_USERNAME'),
-                    password: configService.get('DB_PASSWORD'),
-                    database: configService.get('DB_DATABASE'),
-                    entities: [__dirname + '/**/*.entity{.ts,.js}'],
-                    synchronize: configService.get('DB_SYNCHRONIZE') === 'true',
-                    logging: configService.get('NODE_ENV') === 'development',
-                    ssl: configService.get('NODE_ENV') === 'production' ? { rejectUnauthorized: false } : false,
-                };
-            },
+            useFactory: () => ({
+                ...databaseOptions(process.env, __dirname),
+                logging: process.env.NODE_ENV === 'development',
+            }),
             inject: [ConfigService],
         }),
 

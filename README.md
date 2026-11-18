@@ -452,6 +452,8 @@ git push origin main --tags
 
 ## Backend Deployment (Railway)
 
+See [Deployment and API Guide](docs/DEPLOYMENT_AND_API.md) for branch selection, migrations, hosted environment variables, and Gemini API examples.
+
 ```bash
 cd backend
 railway up

@@ -4,9 +4,9 @@ The application retains its NestJS/Next.js architecture, shared clinical records
 
 ## Database
 
-Back up the database before rollout. From `backend/`, run `npm run migration:run` against the intended environment before starting the updated application. The additive migration adds nullable patient links to cases and versioned audit-chain fields. It does not infer patient links or rewrite legacy audit records. Configure `DB_SSL=true` when required; certificate verification defaults to enabled for migration connections.
+Back up the database before rollout. From `backend/`, run `npm run migration:run` against the intended environment before starting the updated application. The additive migration adds nullable patient links to cases and versioned audit-chain fields. It does not infer patient links or rewrite legacy audit records. Configure `DB_SSL` and `DB_SSL_REJECT_UNAUTHORIZED` for the database provider. The application and migration CLI share the same connection settings.
 
-The migration expects an existing PulseLogic database. A new disposable development database can still be initialized using the existing TypeORM synchronization setup. Do not run the migration or application against production while testing.
+The initial migration now bootstraps an empty database and skips existing installations; additive migrations upgrade existing records. Production startup applies compiled migrations before serving requests. Use a disposable database for testing.
 
 ## Verification
 
@@ -35,10 +35,10 @@ Web build/dev commands explicitly select web mode. Native static builds use an i
 
 ## Verification completed
 
-- Backend production build and 21 Jest tests passed with Node16 resolution and isolated module compilation.
+- Backend production build and 29 Jest tests passed with Node16 resolution and isolated module compilation.
 - Five frontend session tests passed, including concurrent refresh and logout during refresh.
 - Web production build and native static export passed. Patient/case static detail pages were exported without server auth routes.
-- Chromium checked 135 role/page/viewport combinations at 360px, 768px, and 1366px, including dialog focus, report printing, symptom persistence, case editing, and reloads.
+- Chromium checked 138 role/page/viewport combinations at 360px, 768px, and 1366px, including dialog focus, report printing, symptom persistence, case editing, and reloads.
 - Disposable PostgreSQL verified the additive migration, 25 concurrent audit appends, tamper detection, account protections, clearance checks, assignment, patient linking, and bounded pagination. HTTP checks denied unauthorized document reads/analysis and admin access.
 - Gemini Flash Lite returned live text through the application adapter. This verifies connectivity, not clinical accuracy or image-analysis accuracy.
 
